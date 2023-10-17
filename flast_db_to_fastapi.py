@@ -6,7 +6,9 @@ from contextlib import contextmanager
 
 import pymysql
 
-from config import hash_secret_key, default_web_hook
+from config import default_web_hook
+
+hash_secret_key = ''  # 密码加密字符串，与config.hash_secret_key 一致，否则会导致加密出来的字符串不一致
 
 from_db, to_db = '', ''  # 数据库名
 
