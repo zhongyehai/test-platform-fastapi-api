@@ -66,6 +66,7 @@ class AddTaskForm(BaseForm):
     email_from: Optional[str] = Field(title="发件人邮箱")
     email_pwd: Optional[str] = Field(title="发件人邮箱密码")
     cron: str = Field(..., title="cron表达式")
+    skip_holiday: bool = Field(True, title="是否跳过节假日、调休日")
     conf: Optional[dict] = Field({}, title="运行配置", description="webUi存浏览器，appUi存运行服务器、手机、是否重置APP")
     is_async: int = Field(default=0, title="任务的运行机制", description="0：串行，1：并行，默认0")
     call_back: Optional[Union[list, dict]] = Field(title="回调给流水线")

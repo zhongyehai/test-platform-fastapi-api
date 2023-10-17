@@ -1,7 +1,10 @@
+import datetime
+
 import httpx
 from loguru import logger
 
-from config import main_server_host, job_server_host
+from config import main_server_host
+from app.config.model_factory import Config
 
 
 async def request(url, *args, **kwargs):
@@ -61,9 +64,17 @@ async def login():
     return {"X-Token": response.json()['data']['token']}
 
 
-async def request_run_task_api(task_code, task_type):
+async def request_run_task_api(task_code, task_type, skip_holiday=True):
     """ 调执行任务接口 """
     logger.info(f'{"*" * 20} 开始触发执行定时任务 {"*" * 20}')
+
+    # 判断是否设置了跳过节假日、调休日
+    if skip_holiday:
+        to_day = datetime.datetime.today().strftime("%Y-%m-%d")
+        holiday_list = await Config.get_holiday_list()
+        if to_day in holiday_list:
+            return
+
     if isinstance(task_code, str) and task_code.startswith('cron'):  # 系统定时任务
         api_addr = '/system/job/run'
     else:  # 自动化测试定时任务

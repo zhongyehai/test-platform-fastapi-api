@@ -609,6 +609,7 @@ class BaseTask(BaseModel):
     email_from = fields.CharField(255, null=True, default=None, description="发件人邮箱")
     email_pwd = fields.CharField(255, null=True, default=None, description="发件人邮箱密码")
     email_to = fields.JSONField(default=[], description="收件人邮箱")
+    skip_holiday = fields.BooleanField(default=True, description="是否跳过节假日、调休日")
     status = fields.CharEnumField(
         DataStatusEnum, default=DataStatusEnum.DISABLE, description="任务的启用状态, enable/disable，默认disable")
     is_async = fields.IntField(default=0, description="任务的运行机制，0：串行，1：并行，默认0")

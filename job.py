@@ -37,7 +37,7 @@ async def add_job(request: Request, task: dict = Body(), task_type: str = Body()
     await scheduler.add_new_job(
         task_code=task_code,
         func=request_run_task_api,  # 异步执行任务
-        kwargs={"task_code": task_code, "task_type": task_type},
+        kwargs={"task_code": task_code, "task_type": task_type, "skip_holiday": task.get("skip_holiday")},
         cron=task["cron"]
     )
     return request.app.success(f'定时任务启动成功')
