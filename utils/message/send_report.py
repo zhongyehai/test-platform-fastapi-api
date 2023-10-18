@@ -11,7 +11,7 @@ from utils.message.template import diff_api_msg, run_time_error_msg, build_call_
     get_inspection_msg, get_business_stage_count_msg
 from app.config.model_factory import Config
 from app.assist.model_factory import CallBack
-from config import error_push, default_web_hook
+from config import default_web_hook
 
 
 def send_msg(addr, msg):
@@ -31,6 +31,17 @@ def send_server_status(server_name, app_title=None, action_type="启动"):
             "title": f"服务{action_type}通知",
             "text": f'### 服务{action_type}通知 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} \n> '
                     f'#### 服务<font color=#FF0000>【{server_name}】【{app_title}】</font>{action_type}完成 \n> '
+        }
+    }
+    send_msg(default_web_hook, msg)
+
+
+def send_system_error(title, content):
+    """ 系统报错 """
+    msg = {
+        "msgtype": "text",
+        "text": {
+            "content": f"""{title}:\n{content}"""
         }
     }
     send_msg(default_web_hook, msg)
@@ -59,12 +70,14 @@ def send_report(**kwargs):
     """ 封装发送测试报告提供给多线程使用 """
     logger.info(f'开始发送测试报告')
     is_send, receive_type, content = kwargs.get("is_send"), kwargs.get("receive_type"), kwargs.get("content")
-    if is_send == SendReportTypeEnum.ALWAYS or (is_send == SendReportTypeEnum.ON_FAIL and content["result"] != "success"):
+    if is_send == SendReportTypeEnum.ALWAYS or (
+            is_send == SendReportTypeEnum.ON_FAIL and content["result"] != "success"):
         if receive_type == ReceiveTypeEnum.EMAIL:
             send_inspection_by_email(content, kwargs)
         else:
             send_inspection_by_msg(receive_type, content, kwargs)
     logger.info(f'测试报告发送完毕')
+
 
 # def async_send_report(**kwargs):
 #     """ 多线程发送测试报告 """
@@ -100,18 +113,7 @@ async def call_back_for_pipeline(task_id, call_back_info: list, extend: dict, st
         except Exception as error:
             logger.error(f'回调流水线：{call_back.get("url")}失败')
             await call_back_obj.fail()
-            # 发送即时通讯通知
-            try:
-                requests.post(
-                    url=error_push.get("url"),
-                    json={
-                        "key": error_push.get("key"),
-                        "head": f'回调{call_back.get("url")}报错了',
-                        "body": f'{error}'
-                    }
-                )
-            except Exception as error:
-                logger.error("发送回调流水线错误消息失败")
+            send_system_error(title="回调报错通知", content=f'{error}')  # 发送通知
     logger.info("回调流水线执行结束")
 
 

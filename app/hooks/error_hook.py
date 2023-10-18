@@ -6,6 +6,7 @@ from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 
 from app.system.model_factory import SystemErrorRecord
+from utils.message.send_report import send_system_error
 from utils.view import restful
 from utils.util import request as async_requests
 
@@ -72,15 +73,8 @@ def register_exception_handler(app):
 
             # 发送即时通讯通知
             if platform.platform().startswith('Linux'):
-                send_error_msg_res = await async_requests.post(
-                    url=request.app.conf.error_push["url"],
-                    json={
-                        "key": request.app.conf.error_push["key"],
-                        "head": f'{request.app.conf.error_push["key"]}报错，数据id：{error_record.id}',
-                        "body": f'{error_record}   \n\n{error}'
-                    }
-                )
-                request.app.logger.info(f'发送错误消息结果: {send_error_msg_res.text}')
+                send_system_error(
+                    title=f'{request.app.config["SECRET_KEY"]}报错通知，数据id：{error_record.id}', content=error)
         except Exception as error:
             print(traceback.format_exc())
 

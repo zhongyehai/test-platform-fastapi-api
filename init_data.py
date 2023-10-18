@@ -287,7 +287,7 @@ async def init_config():
             {"name": "kym", "value": json.dumps(kym_keyword, ensure_ascii=False), "desc": "KYM分析项"},
             {"name": "sync_mock_data", "value": {}, "desc": "同步回调数据源"},
             {"name": "async_mock_data", "value": {}, "desc": "异步回调数据源"},
-            {"name": "holiday_list", "value": [], "desc": "节假日日期，需每年手动更新"},
+            {"name": "holiday_list", "value": ["01-01", "04-05", "05-01", "10-01"], "desc": "节假日/调休日期，需每年手动更新"},
             {"name": "default_diff_message_send_addr", "value": "", "desc": "yapi接口监控报告默认发送钉钉机器人地址"},
             {"name": "run_time_out", "value": "600", "desc": "前端运行测试时，等待的超时时间，秒"},
             {"name": "report_host", "value": "http://localhost", "desc": "查看报告域名"},

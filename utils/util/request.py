@@ -70,9 +70,8 @@ async def request_run_task_api(task_code, task_type, skip_holiday=True):
 
     # 判断是否设置了跳过节假日、调休日
     if skip_holiday:
-        to_day = datetime.datetime.today().strftime("%Y-%m-%d")
-        holiday_list = await Config.get_holiday_list()
-        if to_day in holiday_list:
+        if datetime.datetime.today().strftime("%m-%d") in await Config.get_holiday_list():
+            logger.info(f'{"*" * 20} 节假日/调休日，跳过 {"*" * 20}')
             return
 
     if isinstance(task_code, str) and task_code.startswith('cron'):  # 系统定时任务

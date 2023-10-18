@@ -25,7 +25,8 @@ class JobFuncs:
         {
             "name": "清理测试报告",
             "id": "cron_clear_report",
-            "cron": "0 0 2 * * ?"
+            "cron": "0 0 2 * * ?",
+            "skip_holiday": true
         }
         """
 
@@ -45,7 +46,8 @@ class JobFuncs:
         {
             "name": "周统计任务",
             "id": "cron_count_of_week",
-            "cron": "0 0 18 ? * FRI"
+            "cron": "0 0 18 ? * FRI",
+            "skip_holiday": false
         }
         """
 
@@ -57,7 +59,8 @@ class JobFuncs:
         {
             "name": "月统计任务",
             "id": "cron_count_of_month",
-            "cron": "0 1 18 last * *"
+            "cron": "0 1 18 last * *",
+            "skip_holiday": false
         }
         """
         await cls.run_task_report_count("cron_count_of_month", "month")
