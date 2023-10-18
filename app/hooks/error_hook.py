@@ -74,7 +74,7 @@ def register_exception_handler(app):
             # 发送即时通讯通知
             if platform.platform().startswith('Linux'):
                 send_system_error(
-                    title=f'{request.app.config["SECRET_KEY"]}报错通知，数据id：{error_record.id}', content=error)
+                    title=f'{request.app.conf["SECRET_KEY"]}报错通知，数据id：{error_record.id}', content=error)
         except Exception as error:
             print(traceback.format_exc())
 
