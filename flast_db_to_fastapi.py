@@ -1142,7 +1142,7 @@ def migration_ui_test():
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"],
-                        "make_data" if data["suite_type"] == "assit" else data["suite_type"]
+                        "make_data" if data["suite_type"] == "assist" else data["suite_type"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
                     assert db_data["id"]
@@ -1550,7 +1550,7 @@ def migration_app_test():
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"],
-                        "make_data" if data["suite_type"] == "assit" else data["suite_type"]
+                        "make_data" if data["suite_type"] == "assist" else data["suite_type"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
                     assert db_data["id"]
