@@ -5,6 +5,7 @@ from ...assist.model_factory import Hits
 from ...api_test.model_factory import ApiProject as Project, ApiModule as Module, ApiMsg as Api, ApiCase as Case, \
     ApiStep as Step, ApiTask as Task, ApiReport as Report
 from utils.util.time_util import get_now, time_calculate, get_week_start_and_end
+from ...enums import DataStatusEnum
 
 
 async def get_data_by_time(model):
@@ -154,8 +155,8 @@ async def get_api_test_case(request: Request):
 
 @home.login_post("/apiTest/step", summary="统计步骤数")
 async def get_api_test_step(request: Request):
-    not_run_count = await Step.filter(status=0).count()
-    is_run_count = await Step.filter(status__not=0).count()
+    not_run_count = await Step.filter(status=DataStatusEnum.DISABLE.value).count()
+    is_run_count = await Step.filter(status=DataStatusEnum.ENABLE.value).count()
     time_data = await get_data_by_time(Step)
     return request.app.success("获取成功", data={
         "title": "测试步骤",
@@ -176,8 +177,8 @@ async def get_api_test_step(request: Request):
 
 @home.login_post("/apiTest/task", summary="统计定时任务数")
 async def get_api_test_task(request: Request):
-    enable_task_count = await Task.filter(status=1).count()
-    disable_task_count = await Task.filter(status=1).count()
+    enable_task_count = await Task.filter(status=DataStatusEnum.ENABLE.value).count()
+    disable_task_count = await Task.filter(status=DataStatusEnum.DISABLE.value).count()
     time_data = await get_data_by_time(Task)
     return request.app.success("获取成功", data={
         "title": "定时任务",
