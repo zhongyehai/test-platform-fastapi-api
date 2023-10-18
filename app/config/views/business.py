@@ -33,7 +33,7 @@ async def add_business(form: PostBusinessForm, request: Request):
 
     # 给创建者添加绑定关系
     request.state.user.business_list.append(business.id)
-    await User.filter(id=request.state.user.id).update(business_id=request.state.user.business_list)
+    await User.filter(id=request.state.user.id).update(business_list=request.state.user.business_list)
 
     # 重新生成token
     user = await User.filter(id=request.state.user.id).first()
