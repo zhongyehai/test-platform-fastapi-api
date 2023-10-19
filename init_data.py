@@ -176,7 +176,7 @@ async def init_role():
                     for source in source_addr_list:
                         addr = source["source_addr"]
                         # 管理员权限、系统管理、配置管理、帮助、任务管理，排除
-                        if addr.startswith(('/system', '/platform', '/config', '/help', 'admin')) is False:
+                        if addr.startswith(('/system', '/config', '/help', 'admin')) is False:
                             permission = await Permission.filter(source_addr=addr).first()
                             await RolePermissions.model_create(
                                 {"role_id": test_role.id, "permission_id": permission.id})

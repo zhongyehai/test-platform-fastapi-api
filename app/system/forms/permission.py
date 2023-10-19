@@ -40,7 +40,6 @@ class CreatePermissionForm(BaseForm):
     async def validate_request(self, request: Request, *args, **kwargs):
         """ 数据值校验 """
         self.validate_length()
-        await self.validate_data_is_not_exist(f"权限名 {self.name} 已存在", Permission, name=self.name)
 
 
 class FindPermissionForm(PaginationForm):
@@ -78,6 +77,4 @@ class EditPermissionForm(GetPermissionForm, CreatePermissionForm):
     async def validate_request(self, request: Request, *args, **kwargs):
         """ 数据值校验 """
         self.validate_length()
-        permission = await self.validate_permission_id_is_exist()
-        await self.validate_data_is_not_repeat(f"权限名 {self.name} 已存在", Permission, request.data.id, name=self.name)
-        return permission
+        return await self.validate_permission_id_is_exist()

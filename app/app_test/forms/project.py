@@ -78,7 +78,6 @@ class AddProjectForm(BaseForm):
     script_list: Optional[list] = Field(title="要使用的脚本")
 
     async def validate_request(self, request: Request, *args, **kwargs):
-        await self.validate_data_is_not_exist(f"项目名【{self.name}】已存在", Project, name=self.name)
         await self.validate_data_is_exist("负责人对应的用户不存在", User, id=self.manager)
 
 
@@ -87,7 +86,6 @@ class EditProjectForm(GetProjectForm, AddProjectForm):
 
     async def validate_request(self, request: Request, *args, **kwargs):
         project = await self.validate_project_is_exist()
-        await self.validate_data_is_not_repeat(f"项目名【{self.name}】已存在", Project, self.id, name=self.name)
         await self.validate_data_is_exist("负责人对应的用户不存在", User, id=self.manager)
         return project
 

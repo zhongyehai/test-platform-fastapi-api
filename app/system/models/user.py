@@ -12,7 +12,7 @@ class Permission(BaseModel):
     """ 权限表 """
 
     num = fields.IntField(null=True, default=0, description="序号")
-    name = fields.CharField(30, default='', description="权限名称")
+    name = fields.CharField(30, default='', unique=True, description="权限名称")
     desc = fields.CharField(256, null=True, default='', description="权限备注")
     source_addr = fields.CharField(256, default='', description="权限路径")
     source_type = fields.CharField(256, default="api", description="权限类型， front前端, api后端")
@@ -27,7 +27,7 @@ class Permission(BaseModel):
 class Role(BaseModel):
     """ 角色表 """
 
-    name = fields.CharField(30, default='', description="角色名称")
+    name = fields.CharField(30, default='', unique=True, description="角色名称")
     extend_role = fields.JSONField(default=[], description="继承其他角色的权限")
     desc = fields.CharField(256, null=True, default='', description="权限备注")
 
@@ -78,9 +78,9 @@ class RolePermissions(BaseModel):
 class User(BaseModel):
     """ 用户表 """
 
-    account = fields.CharField(50, index=True, default='', description="账号")
+    account = fields.CharField(50, index=True, default='', unique=True, description="账号")
     password = fields.CharField(128, default='', description="密码")
-    name = fields.CharField(12, default='', description="姓名")
+    name = fields.CharField(12, default='', unique=True, description="姓名")
     status = fields.CharEnumField(DataStatusEnum, default=DataStatusEnum.ENABLE, description="状态，enable/disable")
     business_list = fields.JSONField(default=[], description="用户所在的业务线")
     last_update_password_time = fields.DatetimeField(auto_now_add=True, description="最近一次修改密码时间")

@@ -52,18 +52,13 @@ class AddServerForm(BaseForm):
         # 校验ip格式
         self.validate_is_true('服务器ip地址请去除协议标识', self.ip.lower().startswith(('http', 'https')) is False)
         self.validate_is_true("服务器ip地址错误", validators.ipv4(self.ip) or validators.ipv6(self.ip))
-        # 校验服务器名不重复
-        await self.validate_data_is_not_exist(f"服务器名【{self.name}】已存在", Server, name=self.name)
 
 
 class EditServerForm(GetServerForm, AddServerForm):
     """ 修改服务器的校验 """
 
     async def validate_request(self, *args, **kwargs):
-        server = await self.validate_server_is_exist()
-        # 校验服务器名不重复
-        await self.validate_data_is_not_repeat(f"服务器名【{self.name}】已存在", Server, self.id, name=self.name)
-        return server
+        return await self.validate_server_is_exist()
 
 
 class GetPhoneListForm(PaginationForm):
@@ -109,15 +104,10 @@ class AddPhoneForm(BaseForm):
 
     async def validate_request(self, *args, **kwargs):
         self.validate_is_true(f"分辨率格式错误", len(self.screen.lower().split('x')) == 2)
-        # 校验手机名不重复
-        await self.validate_data_is_not_exist(f"手机设备名【{self.name}】已存在", Phone, name=self.name)
 
 
 class EditPhoneForm(GetPhoneForm, AddPhoneForm):
     """ 修改手机的校验 """
 
     async def validate_request(self, *args, **kwargs):
-        phone = await self.validate_phone_is_exist()
-        # 校验手机名不重复
-        await self.validate_data_is_not_repeat(f"手机设备名【{self.name}】已存在", Phone, self.id, name=self.name)
-        return phone
+        return await self.validate_phone_is_exist()

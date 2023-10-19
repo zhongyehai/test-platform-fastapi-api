@@ -2,7 +2,7 @@ from app.baseModel import fields, pydantic_model_creator, BaseModel
 
 
 class KYMModule(BaseModel):
-    project = fields.CharField(255, description="服务名")
+    project = fields.CharField(255, unique=True, description="服务名")
     kym = fields.JSONField(default={}, description="kym分析")
 
     class Meta:

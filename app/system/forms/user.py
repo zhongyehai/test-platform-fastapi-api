@@ -159,8 +159,4 @@ class EditUserForm(GetUserForm):
 
         self.validate_is_true(1 < len(self.name) < name_max_length, msg=f'用户名长度为2~{name_max_length}位')
         self.validate_is_true(1 < len(self.account) < account_max_length, msg=f'账号长度为2~{account_max_length}位')
-
-        user = await self.validate_user_is_exist()
-        await self.validate_data_is_not_repeat(f"用户名 {self.name} 已存在", User, self.id, name=self.name)
-        await self.validate_data_is_not_repeat(f"账号 {self.account} 已存在", User, self.id, account=self.account)
-        return user
+        return await self.validate_user_is_exist()

@@ -44,7 +44,7 @@ async def ui_get_report_step(form: GetReportStepForm, request: Request):
 @ui_test.post("/report/step/img", summary="报告的步骤截图")
 async def ui_get_report_step_img(form: GetReportStepImgForm, request: Request):
     data = FileUtil.get_report_step_img(form.report_id, form.report_step_id, form.img_type, 'ui')
-    return request.app.get_success({"data": data, "total": 1})
+    return request.app.get_success({"data": data, "total": 1 if data else 0})
 
 
 @ui_test.login_post("/report/status", summary="根据运行id获取当次报告是否全部生成")

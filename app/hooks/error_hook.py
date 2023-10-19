@@ -1,4 +1,5 @@
 import platform
+import re
 import traceback
 
 from pydantic import ValidationError
@@ -8,10 +9,31 @@ from fastapi.exceptions import RequestValidationError
 from app.system.model_factory import SystemErrorRecord
 from utils.message.send_report import send_system_error
 from utils.view import restful
-from utils.util import request as async_requests
+from tortoise import exceptions as tortoise_exceptions
 
 
 def register_exception_handler(app):
+    @app.exception_handler(tortoise_exceptions.IntegrityError)
+    async def db_unique_error(request, exc):
+        """ 统一拦截数据库唯一约束错误并解析 """
+        # ((1062, "Duplicate entry '测试平台' for key 'api_test_project.uid_api_test_pr_name_293ace'"),)
+        filed_value = re.findall("'(.+?)'", str(exc))[0]
+        return request.app.fail(f'【{filed_value}】已存在')
+
+    @app.exception_handler(tortoise_exceptions.ValidationError)
+    async def db_validation_error(request, exc):
+        """ 统一拦截数据库验证错误并解析 """
+        # name: Length of '测试平台测试平台测试平台平台' 1404 > 255
+        str_msg = str(exc)
+        # filed_name = re.findall("^(.+?):", str_msg)[0]  # name
+        filed_value = re.findall("'(.+?)'", str_msg)[0]  # 测试平台测试平台测试平台平台
+        if 'Length' in str_msg:
+            if '>' in str_msg:
+                length = re.findall(">(.+?)$", str_msg)[0]
+                return request.app.fail(f'【{filed_value}】长度超长，最长【{length}】位')
+
+    # TODO 其他数据库字段约束错误，减少数据验证的查询次数
+
     @app.exception_handler(RequestValidationError)
     async def filed_type_error(request, exc):
         """ pydantic数据类型、必传字段 校验不通过
@@ -29,7 +51,7 @@ def register_exception_handler(app):
             {'ctx': {'limit_value': 2}, 'loc': ('body', 'permission_id'), 'msg': 'ensure this value has at least 2 characters', 'type': 'value_error.any_str.min_length'}
         ]
         """
-        return get_error_msg(exc)
+        return request.app.fail(get_error_msg(exc))
 
     @app.exception_handler(ValidationError)
     async def filed_validate_error(request, exc):
@@ -49,7 +71,7 @@ def register_exception_handler(app):
             {'ctx': {'limit_value': 2}, 'loc': ('body', 'permission_id'), 'msg': 'ensure this value has at least 2 characters', 'type': 'value_error.any_str.min_length'}
         ]
         """
-        return get_error_msg(exc)
+        return request.app.fail(exc)
 
     @app.exception_handler(Exception)
     async def unexpected_exception(request: Request, exc: Exception):
@@ -76,7 +98,7 @@ def register_exception_handler(app):
                 send_system_error(
                     title=f'{request.app.conf["SECRET_KEY"]}报错通知，数据id：{error_record.id}', content=error)
         except Exception as error:
-            print(traceback.format_exc())
+            request.app.logger.error(traceback.format_exc())
 
 
 def get_error_msg(exc):
@@ -86,15 +108,15 @@ def get_error_msg(exc):
     error_type, msg = error["type"], error["msg"]
 
     if "type_error" in error_type:  # 数据类型错误
-        return restful.fail(f'{filed_name} 数据类型错误')
+        return f'{filed_name} 数据类型错误'
 
     elif "max_length" in error_type:  # 数据长度超长
-        return restful.fail(f'{filed_name} 长度超长，最多{error["ctx"]["limit_value"]}位')
+        return f'{filed_name} 长度超长，最多{error["ctx"]["limit_value"]}位'
 
     elif "min_length" in error_type:  # 数据长度超长
-        return restful.fail(f'{filed_name} 长度不够，最少{error["ctx"]["limit_value"]}位')
+        return f'{filed_name} 长度不够，最少{error["ctx"]["limit_value"]}位'
 
     elif "required" in msg:  # 必传字段
-        return restful.fail(f'{filed_name} 必传')
+        return f'{filed_name} 必传'
 
-    return restful.fail(msg)  # 数据值验证不通过
+    return msg  # 数据值验证不通过

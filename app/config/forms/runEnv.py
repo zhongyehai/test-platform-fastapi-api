@@ -53,18 +53,14 @@ class PostRunEnvForm(BaseForm):
     desc: Optional[str] = Field(title="备注", max_length=RunEnv.filed_max_length("desc"))
 
     async def validate_request(self, request: Request, *args, **kwargs):
-        await self.validate_data_is_not_exist('环境名已存在', RunEnv, name=self.name)
-        await self.validate_data_is_not_exist('环境code已存在', RunEnv, code=self.code)
+        pass
 
 
 class PutRunEnvForm(GetRunEnvForm, PostRunEnvForm):
     """ 修改环境表单校验 """
 
     async def validate_request(self, request: Request, *args, **kwargs):
-        env = await self.validate_run_env_id()
-        await self.validate_data_is_not_repeat('环境名已存在', RunEnv, self.id, name=self.name)
-        await self.validate_data_is_not_repeat('环境code已存在', RunEnv, self.id, code=self.code)
-        return env
+        return await self.validate_run_env_id()
 
 
 class GetEnvGroupForm(BaseForm):

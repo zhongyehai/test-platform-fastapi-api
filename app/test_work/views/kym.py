@@ -28,8 +28,6 @@ async def download_kym_as_xmind(form: KymProjectForm, request: Request):
 
 @test_work.login_post("/kym/project", summary="kym添加服务")
 async def add_kym_project(form: KymProjectForm, request: Request):
-    if await KYMModule.filter(project=form.project).first():
-        return request.app.fail(f'服务 {form.project} 已存在')
     kym_data = {"nodeData": {"topic": form.project, "root": True, "children": []}}
     kym_data["nodeData"]["children"] = await Config.get_kym()
     await KYMModule.model_create({"project": form.project, "kym": kym_data}, request.state.user)

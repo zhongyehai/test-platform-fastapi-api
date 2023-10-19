@@ -198,6 +198,18 @@
       {
         "name": "系统管理-系统错误记录菜单",
         "source_addr": "/system/permission"
+      },
+      {
+        "name": "系统管理-平台使用分析",
+        "source_addr": "/system/platform"
+      },
+      {
+        "name": "系统管理-平台使用分析-数据总览",
+        "source_addr": "/system/platform/overview"
+      },
+      {
+        "name": "系统管理-平台使用分析-业务线分析",
+        "source_addr": "/system/platform/analyse"
       }
     ],
     "测试管理菜单": [
@@ -224,20 +236,6 @@
       {
         "name": "测试管理-生产bug跟踪菜单",
         "source_addr": "/testManage/bugTrack"
-      }
-    ],
-    "测试平台统计菜单": [
-      {
-        "name": "平台使用分析",
-        "source_addr": "/platform"
-      },
-      {
-        "name": "平台使用分析-数据总览",
-        "source_addr": "/platform/overview"
-      },
-      {
-        "name": "平台使用分析-业务线分析",
-        "source_addr": "/platform/analyse"
       }
     ],
     "自动化辅助菜单": [

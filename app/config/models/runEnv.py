@@ -5,9 +5,9 @@ from app.config.models.business import BusinessLine
 class RunEnv(BaseModel):
     """ 运行环境表 """
 
-    name = fields.CharField(255, null=True, description="环境名字")
+    name = fields.CharField(255, null=True, unique=True, description="环境名字")
     num = fields.IntField(null=True, description="环境序号")
-    code = fields.CharField(255, null=True, index=True, description="环境code")
+    code = fields.CharField(255, null=True, index=True, unique=True, description="环境code")
     desc = fields.CharField(255, null=True, description="备注")
     group = fields.CharField(255, null=True, description="环境分组")
 

@@ -54,7 +54,7 @@ class PostConfigTypeForm(BaseForm):
 
     async def validate_request(self, request: Request, *args, **kwargs):
         """ 数据值校验 """
-        await self.validate_data_is_not_exist(f"配置类型 {self.name} 已存在", ConfigType, name=self.name)
+        pass
 
 
 class PutConfigTypeForm(GetConfigTypeForm, PostConfigTypeForm):
@@ -62,9 +62,7 @@ class PutConfigTypeForm(GetConfigTypeForm, PostConfigTypeForm):
 
     async def validate_request(self, request: Request, *args, **kwargs):
         """ 数据值校验 """
-        config_type = await self.validate_config_type_is_exist()
-        await self.validate_data_is_not_repeat(f"配置类型 {self.name} 已存在", ConfigType, self.id, name=self.name)
-        return config_type
+        return await self.validate_config_type_is_exist()
 
 
 class FindConfigForm(PaginationForm):
@@ -215,13 +213,11 @@ class PostConfigForm(BaseForm):
     desc: Optional[str] = Field(title="备注")
 
     async def validate_request(self, request: Request, *args, **kwargs):
-        await self.validate_data_is_not_exist(f"配置 {self.name} 已存在", Config, name=self.name)
+        pass
 
 
 class PutConfigForm(GetConfigByIdForm, PostConfigForm):
     """ 修改配置表单校验 """
 
     async def validate_request(self, request: Request, *args, **kwargs):
-        config = await self.validate_config_is_exist()
-        await self.validate_data_is_not_repeat(f"配置 {self.name} 已存在", Config, self.id, name=self.name)
-        return config
+        return await self.validate_config_is_exist()

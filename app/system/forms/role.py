@@ -38,7 +38,6 @@ class CreateRoleForm(BaseForm):
     async def validate_request(self, *args, **kwargs):
         """ 数据值校验 """
         self.validate_length()
-        await self.validate_data_is_not_exist(f"角色名 {self.name} 已存在", Role, name=self.name)
 
 
 class FindRoleForm(PaginationForm):
@@ -82,6 +81,4 @@ class EditRoleForm(GetRoleForm, CreateRoleForm):
     async def validate_request(self, request: Request, *args, **kwargs):
         """ 数据值校验 """
         self.validate_length()
-        role = await self.validate_role_id_is_exist()
-        await self.validate_data_is_not_repeat(f"角色名 {self.name} 已存在", Role, role.id, name=self.name)
-        return role
+        return await self.validate_role_id_is_exist()

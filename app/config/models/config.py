@@ -4,7 +4,7 @@ from app.baseModel import fields, pydantic_model_creator, BaseModel
 class ConfigType(BaseModel):
     """ 配置类型表 """
 
-    name = fields.CharField(128, null=True, description="字段名")
+    name = fields.CharField(128, null=True, unique=True, description="字段名")
     desc = fields.CharField(255, description="描述")
 
     class Meta:
@@ -15,7 +15,7 @@ class ConfigType(BaseModel):
 class Config(BaseModel):
     """ 配置表 """
 
-    name = fields.CharField(128, null=True, index=True, description="字段名")
+    name = fields.CharField(128, null=True, index=True, unique=True, description="字段名")
     value = fields.TextField(null=True, description="字段值")
     type = fields.IntField(null=True, index=True, description="配置类型")
     desc = fields.TextField(description="描述")

@@ -4,7 +4,7 @@ from app.baseModel import BaseModel, pydantic_model_creator, fields
 class AppUiRunServer(BaseModel):
     """ 运行服务器表 """
 
-    name = fields.CharField(255, null=True, description="服务器名字")
+    name = fields.CharField(255, null=True, unique=True, description="服务器名字")
     num = fields.IntField(null=True, description="序号")
     os = fields.CharField(8, null=True, description="服务器系统类型：windows/mac/linux")
     ip = fields.CharField(32, null=True, description="服务器ip地址")
@@ -25,7 +25,7 @@ class AppUiRunServer(BaseModel):
 class AppUiRunPhone(BaseModel):
     """ 运行终端表 """
 
-    name = fields.CharField(255, null=True, description="设备名字")
+    name = fields.CharField(255, null=True, unique=True, description="设备名字")
     num = fields.IntField(null=True, description="序号")
     os = fields.CharField(8, null=True, description="设备系统类型：Android/ios")
     os_version = fields.CharField(255, null=True, description="设备系统版本号")

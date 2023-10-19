@@ -7,8 +7,8 @@ from ...system.model_factory import User
 class BusinessLine(BaseModel):
     """ 业务线 """
 
-    name = fields.CharField(128, null=True, description="业务线名")
-    code = fields.CharField(128, null=True, description="业务线编码")
+    name = fields.CharField(128, null=True, unique=True, description="业务线名")
+    code = fields.CharField(128, null=True, unique=True, description="业务线编码")
     receive_type = fields.CharEnumField(
         ReceiveTypeEnum, default=ReceiveTypeEnum.NOT_RECEIVE,
         description="接收通知类型：not_receive:不接收、we_chat:企业微信、ding_ding:钉钉")

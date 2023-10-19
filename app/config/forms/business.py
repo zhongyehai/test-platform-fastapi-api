@@ -63,8 +63,6 @@ class PostBusinessForm(BaseForm):
     desc: Optional[str] = Field(title="备注", max_length=BusinessLine.filed_max_length("desc"))
 
     async def validate_request(self, request: Request, *args, **kwargs):
-        await self.validate_data_is_not_exist('业务线名已存在', BusinessLine, name=self.name)
-        await self.validate_data_is_not_exist('业务线code已存在', BusinessLine, code=self.code)
         if self.receive_type != "0":
             self.validate_is_true(f"要接收段统计通知，则通知地址必填", self.webhook_list)
 
@@ -73,12 +71,9 @@ class PutBusinessForm(GetBusinessForm, PostBusinessForm):
     """ 修改业务线表单校验 """
 
     async def validate_request(self, request: Request, *args, **kwargs):
-        business = await self.validate_business_is_exist()
-        await self.validate_data_is_not_repeat('业务线名已存在', BusinessLine, self.id, name=self.name)
-        await self.validate_data_is_not_repeat('业务线code已存在', BusinessLine, self.id, code=self.code)
         if self.receive_type != "0":
             self.validate_is_true(f"要接收段统计通知，则通知地址必填", self.webhook_list)
-        return business
+        return await self.validate_business_is_exist()
 
 
 class BusinessToUserForm(BaseForm):

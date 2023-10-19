@@ -85,7 +85,6 @@ class AddProjectForm(BaseForm):
 
     async def validate_request(self, *args, **kwargs):
         self.validate_swagger()
-        await self.validate_data_is_not_exist(f"服务名【{self.name}】已存在", Project, name=self.name)
         await self.validate_data_is_exist("负责人对应的用户不存在", User, id=self.manager)
 
 
@@ -95,7 +94,6 @@ class EditProjectForm(GetProjectForm, AddProjectForm):
     async def validate_request(self, *args, **kwargs):
         self.validate_swagger()
         project = await self.validate_project_is_exist()
-        await self.validate_data_is_not_repeat(f"服务名【{self.name}】已存在", Project, self.id, name=self.name)
         await self.validate_data_is_exist("负责人对应的用户不存在", User, id=self.manager)
         return project
 

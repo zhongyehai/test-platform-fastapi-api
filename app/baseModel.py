@@ -168,7 +168,7 @@ class BaseModel(models.Model, JsonUtil):
 class BaseProject(BaseModel):
     """ 服务基类表 """
 
-    name = fields.CharField(255, description="服务名称")
+    name = fields.CharField(255, null=False, unique=True, description="服务名称")
     manager = fields.IntField(description="服务的管理员id")
     script_list = fields.JSONField(default=[], description="引用的脚本文件")
     num = fields.IntField(null=True, description="当前服务的序号")
