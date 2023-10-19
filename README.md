@@ -3,7 +3,7 @@
     1.tortoise-ORM 与 pydantic2.x不适配，pydantic_model_creator方法会报错，使用pydantic1.10.9版本
         详见 https://stackoverflow.com/questions/76648015/fastapi-tortoise-orm-got-keyerror-module-on-pydantic-model-creator
 
-    2.如果是flask版本的老用户，在数据库初始化完毕过后，执行一下 flast_db_to_fastapi.py 这个脚本，把数据迁移到新的数据库下并自动转化成对应的数据结构
+    2.如果是flask版本的老用户，在数据库初始化完毕过后，执行一下 flask_db_to_fastapi.py 这个脚本，把数据迁移到新的数据库下并自动转化成对应的数据结构
 ### 线上预览：http://139.196.100.202/#/login  账号：admin、密码：123456，请不要修改密码
 
 ### 前端传送门：https://github.com/zhongyehai/test-platform-fastapi-front
