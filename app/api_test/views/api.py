@@ -139,25 +139,25 @@ async def delete_api(form: DeleteApiForm, request: Request):
 
 @api_test.login_post("/api/run", summary="运行接口")
 async def run_api(form: RunApiMsgForm, request: Request):
-    run_api_list = await form.validate_request()
+    data = await form.validate_request()
+    run_api_list, project_id = data["run_api_list"], data["project_id"]
     batch_id = Report.get_batch_id(request.state.user.id)
     summary = Report.get_summary_template()
     for env_code in form.env_list:
         summary["env"]["code"], summary["env"]["name"] = env_code, env_code
         report = await Report.get_new_report(
             batch_id=batch_id,
-            run_id=run_api_list[0].id,
-            trigger_id=form.api_list,
+            run_id=form.api_list,
             name=run_api_list[0].name,
             run_type="api",
             env=env_code,
             create_user=request.state.user.id,
-            project_id=form.project_id,
+            project_id=project_id,
             summary=summary
         )
 
         asyncio.create_task(RunApi(
-            project_id=form.project_id, run_name=report.name, api_list=run_api_list, report=report, env_code=env_code
+            project_id=project_id, run_name=report.name, api_list=run_api_list, report=report, env_code=env_code
         ).parse_and_run())
 
-    return request.app.trigger_success(data={"batch_id": batch_id})
+    return request.app.trigger_success({"batch_id": batch_id})

@@ -132,8 +132,7 @@ async def ui_run_case(form: RunCaseForm, request: Request, background_tasks: Bac
             runner=RunCase,
             create_user=request.state.user.id
         )
-    return request.app.trigger_success(
-        data={
+    return request.app.trigger_success({
             "batch_id": batch_id,
             "report_id": report_id if len(form.env_list) == 1 else None
         })

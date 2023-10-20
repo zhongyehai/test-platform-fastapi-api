@@ -27,7 +27,7 @@ class TestRunner:
                     await case_runner.run_step(test_step)  # 执行测试步骤
                     step_error_traceback = None
                 except Exception as error:
-                    step_error_traceback = str(error)
+                    step_error_traceback = traceback.format_exc()
 
                     # 没有执行结果，代表是执行异常，否则代表是步骤里面捕获了异常过后再抛出来的
                     if case_runner.client_session.meta_data["result"] is None:

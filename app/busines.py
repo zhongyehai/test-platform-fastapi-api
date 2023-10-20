@@ -233,26 +233,9 @@ class RunCaseBusiness:
 
     @classmethod
     async def run(
-            cls,
-            is_async,
-            project_id,
-            report_name,
-            task_type,
-            report_model,
-            case_id_list,
-            run_type,
-            runner,
-            temp_variables=None,
-            trigger_id=None,  # 保存触发源的id，方便触发重跑
-            batch_id=None,
-            env_code=None,
-            browser=None,
-            report_id=None,
-            trigger_type="page",
-            task_dict={},
-            appium_config={},
-            extend_data={},
-            create_user=None,
+            cls, is_async, project_id, report_name, task_type, report_model, case_id_list, run_type, runner,
+            batch_id=None, env_code=None, browser=None, report_id=None, trigger_type="page", task_dict={},
+            temp_variables=None, appium_config={}, extend_data={}, create_user=None, trigger_id=None,  # 保存触发源的id，方便触发重跑
     ):
         """ 运行用例/任务 """
         env = await RunEnv.get_data_byid_or_code(env_code=env_code)

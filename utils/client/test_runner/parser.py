@@ -364,24 +364,22 @@ def parse_string_functions(content, variables_mapping, functions_mapping):
         # eval_value = func(*args, **kwargs)
         # 执行自定义函数，有可能会报错
         try:
-            # sys.stdout = open(f"{SCRIPT_PRINT_LOG_ADDRESS}/test.txt", "a", encoding='utf8')  # 脚本的print输出重定向到文本
             eval_value = func(*args, **kwargs)
-            # sys.stdout = sys.__stdout__  # 恢复 print 输出到控制台
         except Exception as error:
             # 记录错误信息
-            FuncErrorRecord.create(
-                name='执行自定义函数错误',
-                detail=f'执行自定义函数【{func_name}】报错了 \n  args参数: {args} \n  kwargs参数: {kwargs} \n\n  '
-                       f'错误信息: \n{traceback.format_exc()}'
-            )
-
-            # 发送自定义函数执行错误的信息
-            send_run_func_error_message(content={
-                "title": "执行自定义函数错误",
-                "detail": f'### {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} \n> '
-                          f'### 执行自定义函数【{func_name}】报错了 \n  args参数: {args} \n  kwargs参数: {kwargs} \n  '
-                          f'### 错误信息: {traceback.format_exc()} \n> '
-            })
+            # FuncErrorRecord.create(
+            #     name='执行自定义函数错误',
+            #     detail=f'执行自定义函数【{func_name}】报错了 \n  args参数: {args} \n  kwargs参数: {kwargs} \n\n  '
+            #            f'错误信息: \n{traceback.format_exc()}'
+            # )
+            #
+            # # 发送自定义函数执行错误的信息
+            # send_run_func_error_message(content={
+            #     "title": "执行自定义函数错误",
+            #     "detail": f'### {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} \n> '
+            #               f'### 执行自定义函数【{func_name}】报错了 \n  args参数: {args} \n  kwargs参数: {kwargs} \n  '
+            #               f'### 错误信息: {traceback.format_exc()} \n> '
+            # })
             raise
 
         func_content = "${" + func_content + "}"
@@ -526,18 +524,10 @@ def parse_data(content, variables_mapping=None, functions_mapping=None, raise_if
 
         try:
             # 提取并执行自定义函数
-            content = parse_string_functions(
-                content,
-                variables_mapping,
-                functions_mapping
-            )
+            content = parse_string_functions(content, variables_mapping, functions_mapping)
 
             # 用公用变量替换字符串中的占位符
-            content = parse_string_variables(
-                content,
-                variables_mapping,
-                functions_mapping
-            )
+            content = parse_string_variables(content, variables_mapping, functions_mapping)
         except exceptions.VariableNotFound:
             if raise_if_variable_not_found:
                 raise

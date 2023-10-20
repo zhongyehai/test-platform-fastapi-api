@@ -71,7 +71,7 @@ async def app_run_suite(form: RunCaseSuiteForm, request: Request):
     batch_id = Report.get_batch_id(request.state.user.id)
     appium_config = await RunCaseBusiness.get_appium_config(suite.project_id, server, phone, form.no_reset)
     for env_code in form.env_list:
-        report_id = RunCaseBusiness.run(
+        report_id = await RunCaseBusiness.run(
             batch_id=batch_id,
             env_code=env_code,
             is_async=form.is_async,
@@ -86,9 +86,7 @@ async def app_run_suite(form: RunCaseSuiteForm, request: Request):
             appium_config=appium_config
         )
 
-    return request.app.trigger_success(
-        msg="触发执行成功，请等待执行完毕",
-        data={
+    return request.app.trigger_success({
             "batch_id": batch_id,
             "report_id": report_id if len(form.env_list) == 1 else None
         })

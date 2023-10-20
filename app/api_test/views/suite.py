@@ -69,7 +69,7 @@ async def api_run_suite(form: RunCaseSuiteForm, request: Request):
     case_id_list = await suite.get_run_case_id(Case)
     batch_id = Report.get_batch_id(request.state.user.id)
     for env_code in form.env_list:
-        report_id = RunCaseBusiness.run(
+        report_id = await RunCaseBusiness.run(
             batch_id=batch_id,
             env_code=env_code,
             is_async=form.is_async,
@@ -79,13 +79,12 @@ async def api_run_suite(form: RunCaseSuiteForm, request: Request):
             report_model=Report,
             trigger_id=form.id,
             case_id_list=case_id_list,
+            create_user=request.state.user.id,
             run_type="api",
             runner=RunCase
         )
 
-    return request.app.trigger_success(
-        msg="触发执行成功，请等待执行完毕",
-        data={
+    return request.app.trigger_success({
             "batch_id": batch_id,
             "report_id": report_id if len(form.env_list) == 1 else None
         })

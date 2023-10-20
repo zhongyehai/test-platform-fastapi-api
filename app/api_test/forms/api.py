@@ -123,11 +123,14 @@ class ChangeStatus(GetApiForm):
 
 class RunApiMsgForm(BaseForm):
     """ 运行接口 """
-    project_id: int = Field(..., title="服务id")
     api_list: List[int] = Field(..., title="要运行的接口id")
     env_list: List[str] = Field(..., title="运行环境code")
 
     async def validate_request(self, *args, **kwargs):
-        await self.validate_data_is_exist("服务不存在", Project, id=self.project_id)
         self.validate_is_true(self.api_list, "接口id必传")
-        return await Api.filter(id__in=self.api_list).all()
+        run_api_list = await Api.filter(id__in=self.api_list).all()
+        project = await Project.filter(id=run_api_list[0].project_id).first()
+        return {
+            "run_api_list": run_api_list,
+            "project_id": project.id
+        }

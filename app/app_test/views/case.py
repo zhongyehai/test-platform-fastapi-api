@@ -134,8 +134,7 @@ async def app_run_case(form: RunCaseForm, request: Request):
             create_user=request.state.user.id,
             appium_config=appium_config
         )
-    return request.app.trigger_success(
-        data={
+    return request.app.trigger_success({
             "batch_id": batch_id,
             "report_id": report_id if len(form.env_list) == 1 else None
         })

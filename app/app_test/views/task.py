@@ -105,8 +105,7 @@ async def app_run_task(form: RunTaskForm, request: Request, background_tasks: Ba
             appium_config=appium_config
         )
 
-    return request.app.trigger_success(
-        data={
+    return request.app.trigger_success({
             "batch_id": batch_id,
             "report_id": report_id if len(env_list) == 1 else None
         })
