@@ -30,7 +30,7 @@ async def ui_change_element_sort(form: ChangeSortForm, request: Request):
 @ui_test.login_put("/element/change", summary="根据id修改元素")
 async def ui_change_element_by_id(form: ChangeElementByIdForm, request: Request):
     element = await form.validate_request()
-    await element.model_update(**form.dict(), user=request.state.user)
+    await element.model_update(form.dict(), user=request.state.user)
     return request.app.put_success()
 
 
@@ -46,7 +46,7 @@ async def ui_element_upload(request: Request, file: UploadFile = File(), page_id
     if file and file.filename.endswith("xls"):
         # [{"元素名称": "账号输入框", "定位方式": "根据id属性定位", "元素表达式": "account", "等待元素出现的超时时间": 10.0}]
         excel_data = parse_file_content(file.read())
-        option_dict = {option["label"]: option["value"] for option in Config.get_find_element_option()}
+        option_dict = {option["label"]: option["value"] for option in await Config.get_find_element_option()}
         element_list = []
         for element_data in excel_data:
             name, by = element_data.get("元素名称"), element_data.get("定位方式")

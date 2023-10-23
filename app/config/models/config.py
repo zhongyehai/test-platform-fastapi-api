@@ -79,6 +79,10 @@ class Config(BaseModel):
     async def get_holiday_list(cls):
         return cls.loads(await cls.get_config("holiday_list"))
 
+    @classmethod
+    async def get_find_element_option(cls):
+        return cls.loads(await cls.get_config(name="find_element_option"))
+
     # @classmethod
     # def get_default_diff_message_send_addr(cls):
     #     """ 配置的对比结果通知地址 """
@@ -100,9 +104,6 @@ class Config(BaseModel):
     # def get_data_source_callback_token(cls):
     #     return cls.get_first(name="data_source_callback_token").value
     #
-    # @classmethod
-    # def get_find_element_option(cls):
-    #     return cls.loads(cls.get_first(name="find_element_option").value)
     #
     # @classmethod
     # def get_pagination_size(cls):
