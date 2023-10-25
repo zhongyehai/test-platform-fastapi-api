@@ -107,13 +107,13 @@ async def api_get_report_list(form: AnalyseForm, request: Request):
     fail_count = all_count - pass_count
 
     # 创建人执行次数统计
-    user_count_sql = """
+    user_count_sql = f"""
         SELECT user.name AS name, count(user.id) AS value
         FROM system_user user,
              api_test_report report,
              api_test_project project
         WHERE report.project_id = project.id
-          AND project.business_id = 1
+          AND project.business_id = {form.business_id}
           AND user.id = report.create_user
     """
     if form.trigger_type:
