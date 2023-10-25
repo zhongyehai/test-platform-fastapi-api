@@ -12,11 +12,11 @@
         "source_addr": "/api/system/user"
       },
       {
-        "name": "用户管理-用户的权限",
+        "name": "用户管理-用户的角色",
         "source_addr": "/api/system/user/role"
       },
       {
-        "name": "用户管理-用户的权限",
+        "name": "用户管理-用户列表",
         "source_addr": "/api/system/user/list"
       },
       {
