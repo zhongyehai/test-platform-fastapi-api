@@ -5,7 +5,8 @@ from fastapi import Request
 from app.system.routers import system_router
 from app.system.model_factory import User, UserPydantic, Role
 from app.system.forms.user import (
-    CreateUserForm, EditUserForm, ChangePasswordForm, LoginForm, FindUserForm, GetUserForm, ChangeStatusUserForm
+    CreateUserForm, EditUserForm, ChangePasswordForm, LoginForm, FindUserForm, GetUserForm, ChangeStatusUserForm,
+    MigrateUserChangePasswordForm
 )
 
 
@@ -13,7 +14,8 @@ from app.system.forms.user import (
 async def get_user_list(form: FindUserForm, request: Request):
     await form.validate_request(request)
     get_filed = [] if form.detail else ["id", "name"]
-    query_data = await form.make_pagination(User, get_filed=get_filed, user_list=request.state.user_list)
+    query_data = await form.make_pagination(
+        User, get_filed=get_filed, user_list=request.state.user_list, not_get_filed=['password'])
     return request.app.get_success(data=query_data)
 
 
@@ -54,8 +56,6 @@ async def change_user(form: EditUserForm, request: Request):
 @system_router.post("/user/login", summary="用户登录")
 async def user_login(form: LoginForm, request: Request):
     user = await form.validate_request(request)
-    # if (datetime.datetime.now() - user.last_update_password_time).day > 90:  # 90天重置密码
-    #     return request.app.need_reset_password()
     permissions = await user.get_user_permissions()
     front_addr_list, api_addr_list = permissions["front_addr_list"], permissions["api_addr_list"]
 
@@ -90,9 +90,17 @@ async def change_user_status(form: ChangeStatusUserForm, request: Request):
     return request.app.put_success()
 
 
-@system_router.admin_put("/user/password", summary="修改密码")
+@system_router.login_put("/user/password", summary="修改密码")
 async def change_user_password(form: ChangePasswordForm, request: Request):
     await form.validate_request(request)
     new_password = User.password_to_hash(form.new_password, request.app.conf.hash_secret_key)
-    await User.filter(id=request.state.user.id).update(password=new_password)
+    await User.filter(id=request.state.user.id).update(password=new_password, need_change_password=0)
+    return request.app.put_success()
+
+
+@system_router.put("/user/password/migrate", summary="迁移用户修改密码")
+async def migrate_user_change_password(form: MigrateUserChangePasswordForm, request: Request):
+    user = await form.validate_request(request)
+    new_password = User.password_to_hash(form.new_password, request.app.conf.hash_secret_key)
+    await User.filter(id=user.id).update(password=new_password, need_change_password=0)
     return request.app.put_success()

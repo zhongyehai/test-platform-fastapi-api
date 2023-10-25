@@ -58,7 +58,7 @@ def format_report_summary(summary):
             "testcases": {
                 "fail": 1,
                 "total": 1,
-                "project": "巡检",
+                "project": "贷前巡检",
                 "success": 0
             },
             "teststeps": {
@@ -76,9 +76,9 @@ def format_report_summary(summary):
             "start_at": "2023-07-04 09:30:01",
             "start_date": "2023-07-04 09:30:01"
         },
-        "run_env": "new_test",
+        "run_env": "us_test",
         "success": false,
-        "env_name": "开发-new",
+        "env_name": "开发-美国",
         "is_async": null,
         "run_type": "api",
         "count_api": 14,
@@ -219,20 +219,18 @@ def send_msg(res_data):
         f'#### 总共耗时: <font color=#FF0000>{all_duration} </font>秒\n> '
         f'#### 总共迁移: <font color=#FF0000>{all_count} </font>条数据\n> '
     )
+    print(text)
     import requests
-    try:
-        requests.post(
-            url=default_web_hook,
-            json={
-                "msgtype": "markdown",
-                "markdown": {
-                    "title": "数据迁移进度通知",
-                    "text": text
-                }
+    requests.post(
+        url='https://oapi.dingtalk.com/robot/send?access_token=986c4f98c66b777b6d628e8efe10cc5b4875e87086bcf2d43387cafac2d34a04',
+        json={
+            "msgtype": "markdown",
+            "markdown": {
+                "title": "数据迁移进度通知",
+                "text": text
             }
-        )
-    except:
-        pass
+        }
+    )
 
 
 class DbOption:
@@ -389,11 +387,11 @@ def migration_system():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.system_user 
                     (id, create_time, update_time, create_user, update_user, account, password, name, status, 
-                    business_list, last_update_password_time) 
+                    business_list, need_change_password) 
                     values {
                     (data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                      data["account"], password_to_hash(data["account"]), data["name"], "enable" if data["status"] == 1 else "disable",
-                     data["business_list"], data["created_time"])
+                     data["business_list"], 1)
                     } """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
                     assert db_data["id"]
@@ -699,7 +697,7 @@ def migration_api_test():
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["project_id"], data["module_id"], data["time_out"],
-                        data["addr"], data["up_func"], data["down_func"], data["method"], data["level"], data["headers"],
+                        data["addr"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["method"], data["level"], data["headers"],
                         data["params"], data["data_type"], data["data_form"], data["data_urlencoded"], data["data_json"],
                         data["data_text"] or '', data["response"] or '{}', data["extracts"], data["validates"],
                         "disable" if data["deprecated"] == 1 else "enable", data["quote_count"]
@@ -802,10 +800,11 @@ def migration_api_test():
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                         data["name"], -1 if data["num"] is None else data["num"], data["case_id"], data["api_id"] or -1, data["time_out"],
-                        data["up_func"], data["down_func"], data["headers"], data["params"], data["data_type"],
+                        data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["headers"], data["params"], data["data_type"],
                         data["data_form"], data["data_urlencoded"], data["data_json"], data["data_text"] or '', data["extracts"],
                         data["validates"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["replace_host"], data["skip_if"],
-                        "disable" if data["status"] == 0 else "enable", data["skip_on_fail"], data["pop_header_filed"]
+                        "disable" if data["status"] == 0 else "enable", data["skip_on_fail"],
+                        '[]' if data["pop_header_filed"] in [None, '', 'null'] else data["pop_header_filed"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -839,14 +838,14 @@ def migration_api_test():
                         is_send, 
                         receive_type, webhook_list, email_server, email_from, 
                         email_pwd, email_to, status, is_async, suite_ids, 
-                        call_back, project_id, conf
+                        call_back, project_id, conf, skip_holiday
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                         data["name"], -1 if data["num"] is None else data["num"], data["env_list"], data["case_ids"], data["task_type"], data["cron"],
                         "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
                         data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
-                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", data["is_async"], data["suite_ids"],
-                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"]
+                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
+                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1209,7 +1208,7 @@ def migration_ui_test():
                         wait_time_out, execute_type, send_keys, extracts, validates, element_id
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], "disable" if data["status"] == 0 else "enable", data["run_times"], data["up_func"], data["down_func"],
+                        data["name"], -1 if data["num"] is None else data["num"], "disable" if data["status"] == 0 else "enable", data["run_times"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]',
                         data["skip_if"], data["skip_on_fail"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["case_id"],
                         data["wait_time_out"], data["execute_type"] or '', data["send_keys"] or '', data["extracts"], data["validates"], data["element_id"] or -1
                     )} """)
@@ -1246,14 +1245,14 @@ def migration_ui_test():
                         is_send, 
                         receive_type, webhook_list, email_server, email_from, 
                         email_pwd, email_to, status, is_async, suite_ids, 
-                        call_back, project_id, conf
+                        call_back, project_id, conf, skip_holiday
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                         data["name"], -1 if data["num"] is None else data["num"], data["env_list"], data["case_ids"], data["task_type"], data["cron"],
                         "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
                         data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
-                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", data["is_async"], data["suite_ids"],
-                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"]
+                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
+                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1615,7 +1614,7 @@ def migration_app_test():
                         wait_time_out, execute_type, send_keys, extracts, validates, element_id
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], "disable" if data["status"] == 0 else "enable", data["run_times"], data["up_func"], data["down_func"],
+                        data["name"], -1 if data["num"] is None else data["num"], "disable" if data["status"] == 0 else "enable", data["run_times"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]',
                         data["skip_if"], 0 if data["skip_on_fail"] is None else data["skip_on_fail"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["case_id"],
                         data["wait_time_out"], data["execute_type"] or '', data["send_keys"] or '', data["extracts"], data["validates"], data["element_id"] or -1
                     )} """)
@@ -1650,14 +1649,14 @@ def migration_app_test():
                         is_send, 
                         receive_type, webhook_list, email_server, email_from, 
                         email_pwd, email_to, status, is_async, suite_ids, 
-                        call_back, project_id, conf
+                        call_back, project_id, conf, skip_holiday
                     )  values {(
                         data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
                         data["name"], -1 if data["num"] is None else data["num"], f'["{data["env_list"]}"]', data["case_ids"], data["task_type"], data["cron"],
                         "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
                         data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
-                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", data["is_async"], data["suite_ids"],
-                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"]
+                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
+                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)

@@ -1,26 +1,23 @@
 """ apscheduler 默认的调度器存储对于异步支持有问题，这里自己实现存储，启动 """
 from apscheduler.schedulers.asyncio import AsyncIOScheduler as _AsyncIOScheduler
-from tortoise import Tortoise
 from loguru import logger
 
 from app.system.model_factory import ApschedulerJobs
-from config import tortoise_orm_conf
 from utils.parse.parse_cron import parse_cron
 from utils.util.request import request_run_task_api
 
 
 class AsyncIOScheduler(_AsyncIOScheduler):
 
-    async def init_scheduler(self):
+    async def init_scheduler(self, task_list):
         """ 初始化scheduler，并把状态为要执行的任务添加到任务队列中 """
-        await Tortoise.init(tortoise_orm_conf, timezone="Asia/Shanghai")  # 数据库链接
 
         logger.info("开始启动scheduler...")
         self.start()
         logger.info("scheduler启动成功...")
 
         logger.info("开始把【ApschedulerJobs】表中的任务添加到内存中...")
-        task_list = await ApschedulerJobs.filter().all()  # 数据库中的所有任务
+        logger.info(f'task_list: {task_list}')
         for task in task_list:
             task_type, task_id = task.task_code.split("_", 1)
 

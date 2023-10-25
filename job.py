@@ -1,11 +1,13 @@
 from fastapi import Request, Body
+from tortoise import Tortoise
 
 from app.hooks.error_hook import register_exception_handler
 from app.hooks.request_hook import register_request_hook
 from app.hooks.app_hook import register_app_hook
 from app.system.forms.job import GetJobForm
 from app.baseView import FastAPI
-from config import job_server_port
+from app.system.models.job import ApschedulerJobs
+from config import job_server_port, tortoise_orm_conf
 from utils.util.request import request_run_task_api
 from utils.util.apscheduler import AsyncIOScheduler
 
@@ -16,7 +18,7 @@ job = FastAPI(
     version="1.0.0",
     description='测试平台的任务管理'
 )
-
+job.title = 'job服务'
 # 注册钩子函数
 register_app_hook(job)
 register_request_hook(job)
@@ -26,9 +28,12 @@ scheduler = AsyncIOScheduler()
 
 
 @job.on_event('startup')
-async def init_scheduler():
+async def init_scheduler_job():
     """ 初始化定时任务 """
-    await scheduler.init_scheduler()
+    await Tortoise.init(tortoise_orm_conf, timezone="Asia/Shanghai")  # 数据库链接
+    await Tortoise.generate_schemas()
+    task_list = await ApschedulerJobs.filter().all()  # 数据库中的所有任务
+    await scheduler.init_scheduler(task_list)
 
 
 @job.post("/api/job", summary="添加定时任务")

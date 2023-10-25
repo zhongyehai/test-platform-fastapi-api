@@ -18,8 +18,8 @@ from utils.client.test_runner.parser import parse_function, extract_functions
 
 @assist_router.login_post("/script/list", response_model=List[ScriptPydantic], summary="获取脚本文件列表")
 async def get_script_list(form: FindScriptForm, request: Request):
-    not_get_filed = ["script_data"] if form.detail else []
-    query_data = await form.make_pagination(Script, not_get_filed=not_get_filed)
+    get_filed = [] if form.detail else ["id", "name"]
+    query_data = await form.make_pagination(Script, get_filed=get_filed, not_get_filed=["script_data"])
     return request.app.get_success(data=query_data)
 
 

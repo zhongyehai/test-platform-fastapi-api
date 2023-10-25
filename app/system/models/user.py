@@ -83,7 +83,7 @@ class User(BaseModel):
     name = fields.CharField(12, default='', unique=True, description="姓名")
     status = fields.CharEnumField(DataStatusEnum, default=DataStatusEnum.ENABLE, description="状态，enable/disable")
     business_list = fields.JSONField(default=[], description="用户所在的业务线")
-    last_update_password_time = fields.DatetimeField(auto_now_add=True, description="最近一次修改密码时间")
+    need_change_password = fields.IntField(default=0, description="是否需要修改密码，用于控制从老版本过来的迁移数据强制改密码")
 
     class Meta:
         table = "system_user"

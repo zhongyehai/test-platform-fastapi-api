@@ -47,4 +47,4 @@ async def get_redoc():
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run('main:app', host="0.0.0.0", port=main_server_port, workers=2)  # 跑测试的时候会阻塞线程，所以多起几个worker
+    uvicorn.run('main:app', host="0.0.0.0", port=main_server_port, workers=2)

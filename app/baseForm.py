@@ -352,7 +352,8 @@ class PaginationForm(BaseForm):
         query = db_Model.filter(**self.get_query_filter(**kwargs)).order_by(order_by_filed)
         query_page = query.offset((self.page_num - 1) * self.page_size).limit(self.page_size)
 
-        if not_get_filed: get_filed = db_Model.filter_not_get_filed(not_get_filed)
+        if len(get_filed) == 0:
+            get_filed = db_Model.filter_not_get_filed(not_get_filed)
 
         data = await query_page.values(*get_filed) if get_filed else await query_page
         return {"total": await query.count(), "data": data}

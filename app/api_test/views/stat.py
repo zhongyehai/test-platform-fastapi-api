@@ -8,7 +8,7 @@ from ...config.model_factory import BusinessLine
 from ..forms.stat import UseCountForm, AnalyseForm
 from utils.util.time_util import time_calculate, get_now
 from ...enums import ApiCaseSuiteTypeEnum
-
+from utils.log import logger
 
 async def get_use_stat(time_slot, project_list: list = []):
     """ 获取时间段的统计 """
@@ -107,19 +107,20 @@ async def api_get_report_list(form: AnalyseForm, request: Request):
 
     # 创建人执行次数统计
     user_count_sql = """
-        SELECT system_user.name AS name, count(system_user.id) AS value
-        FROM system_user,
-             api_test_report,
-             api_test_project
-        WHERE api_test_report.project_id = api_test_project.id
-          AND api_test_project.business_id = 1
-          AND system_user.id = api_test_report.create_user
+        SELECT user.name AS name, count(user.id) AS value
+        FROM system_user user,
+             api_test_report report,
+             api_test_project project
+        WHERE report.project_id = project.id
+          AND project.business_id = 1
+          AND user.id = report.create_user
     """
     if form.trigger_type:
         user_count_sql += f"""AND api_test_report.trigger_type = '{form.trigger_type.value}' \n"""
     if form.start_time:
         user_count_sql += f"""AND api_test_report.create_time between '{form.start_time}' and '{form.end_time}' \n"""
     user_count_sql += """GROUP BY api_test_report.create_user"""
+    logger.info(f'api.report.stat.analyse.user_count_sql: {user_count_sql}')
     user_count_list = await Report.execute_sql(user_count_sql)
 
     return request.app.get_success({
