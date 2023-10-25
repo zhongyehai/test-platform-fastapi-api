@@ -10,6 +10,7 @@ from utils.util.time_util import time_calculate, get_now
 from ...enums import ApiCaseSuiteTypeEnum
 from utils.log import logger
 
+
 async def get_use_stat(time_slot, project_list: list = []):
     """ 获取时间段的统计 """
     start_time, end_time = time_calculate(time_slot), get_now()
@@ -116,10 +117,10 @@ async def api_get_report_list(form: AnalyseForm, request: Request):
           AND user.id = report.create_user
     """
     if form.trigger_type:
-        user_count_sql += f"""AND api_test_report.trigger_type = '{form.trigger_type.value}' \n"""
+        user_count_sql += f"""AND report.trigger_type = '{form.trigger_type.value}' \n"""
     if form.start_time:
-        user_count_sql += f"""AND api_test_report.create_time between '{form.start_time}' and '{form.end_time}' \n"""
-    user_count_sql += """GROUP BY api_test_report.create_user"""
+        user_count_sql += f"""AND report.create_time between '{form.start_time}' and '{form.end_time}' \n"""
+    user_count_sql += """GROUP BY report.create_user"""
     logger.info(f'api.report.stat.analyse.user_count_sql: {user_count_sql}')
     user_count_list = await Report.execute_sql(user_count_sql)
 
