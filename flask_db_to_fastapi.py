@@ -2,11 +2,8 @@ import datetime
 import json
 import hashlib
 import threading
-from contextlib import contextmanager
 
 import pymysql
-
-from config import default_web_hook
 
 hash_secret_key = ''  # 密码加密字符串，与config.hash_secret_key 一致，否则会导致加密出来的字符串不一致
 
@@ -222,7 +219,7 @@ def send_msg(res_data):
     print(text)
     import requests
     requests.post(
-        url='https://oapi.dingtalk.com/robot/send?access_token=986c4f98c66b777b6d628e8efe10cc5b4875e87086bcf2d43387cafac2d34a04',
+        url='',  # 钉钉webhook地址
         json={
             "msgtype": "markdown",
             "markdown": {
@@ -238,58 +235,50 @@ class DbOption:
 
     def __init__(self, db_info):
         self.db_info = db_info
+        self.connect = pymysql.connect(**self.db_info)
+        self.cursor = self.connect.cursor(cursor=pymysql.cursors.DictCursor)
 
-    @contextmanager
-    def connect_db(self):
-        """ 每次执行前连接 """
-        connect = pymysql.connect(**self.db_info)
-        cursor = connect.cursor(cursor=pymysql.cursors.DictCursor)
-        try:
-            yield cursor
-            connect.commit()
-        except:  # 提交异常时需要回滚事件
-            connect.rollback()
-        finally:  # 关闭连接
-            cursor.close()
-            connect.close()
+    def __del__(self):
+        """ 关闭连接 """
+        self.cursor.close()
+        self.connect.close()
 
     def execute(self, sql):
         """ 执行SQL语句 """
         print(f'db.execute.sql: {sql}')
-        with self.connect_db() as db:
-            db.execute(sql)
+        try:
+            self.cursor.execute(sql)
+            self.connect.commit()
+        except:  # 提交异常时需要回滚事件
+            self.connect.rollback()
 
     def fetchone(self, sql):
         """ 查询一条数据 """
-        data = None
-        with self.connect_db() as db:
-            print(f'db.fetchone.sql: {sql}')
-            db.execute(sql)
-            data = db.fetchone()
-            print(f'db.fetchone.res: {data}')
+        print(f'db.fetchone.sql: {sql}')
+        self.cursor.execute(sql)
+        data = self.cursor.fetchone()
+        print(f'db.fetchone.res: {data}')
 
-            if data:
-                data = format_datetime(data, ["created_time", "update_time"])
+        if data:
+            data = format_datetime(data, ["created_time", "update_time"])
 
         return data
 
     def fetchall(self, sql):
         """ 查询所有数据 """
-        data_list = None
-        with self.connect_db() as db:
-            print(f'db.fetchall.sql: {sql}')
-            db.execute(sql)
-            data = db.fetchall()
-            print(f'db.fetchall.res: {data}')
 
-            data_list = [format_datetime(d, ["created_time", "update_time"]) for d in data]
+        print(f'db.fetchall.sql: {sql}')
+        self.cursor.execute(sql)
+        data = self.cursor.fetchall()
+        print(f'db.fetchall.res: {data}')
+
+        data_list = [format_datetime(d, ["created_time", "update_time"]) for d in data]
         return data_list
 
 
-from_connect, to_connect = DbOption(from_db_info), DbOption(to_db_info)
-
-
 def migration_system():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
     def migration_system_permission():
         tabel_name = 'system_permission'
         count, start_at = 0, datetime.datetime.now()
@@ -468,6 +457,8 @@ def migration_system():
 
 
 def migration_config():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
     def migration_config_type():
         tabel_name = 'config_type'
         count, start_at = 0, datetime.datetime.now()
@@ -591,389 +582,9 @@ def migration_config():
     })
 
 
-def migration_api_test():
-    def migration_project():
-        tabel_name = 'api_test_project'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user, name, manager, script_list, swagger, num, last_pull_status, business_id
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["manager"], data["script_list"], data["swagger"], -1 if data["num"] is None else data["num"], data["last_pull_status"], data["business_id"]
-                    )} """)
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_project_env():
-        tabel_name = 'api_test_project_env'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user, host, variables, env_id, project_id, headers
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["host"], data["variables"], data["env_id"], data["project_id"], data["headers"]
-                    )} """)
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_module():
-        tabel_name = 'api_test_module'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user, name, num, parent, project_id, controller
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"], data["controller"] or ''
-                    )} """)
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set parent=null where parent=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set controller=null where controller='' """)
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_api():
-        tabel_name = 'api_test_api'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user, 
-                        name, num, `desc`, project_id, module_id, time_out,
-                        addr, up_func, down_func, method, level, headers,
-                        params, body_type, data_form, data_urlencoded, data_json, 
-                        data_text, response, extracts, validates, 
-                        status, quote_count
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["project_id"], data["module_id"], data["time_out"],
-                        data["addr"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["method"], data["level"], data["headers"],
-                        data["params"], data["data_type"], data["data_form"], data["data_urlencoded"], data["data_json"],
-                        data["data_text"] or '', data["response"] or '{}', data["extracts"], data["validates"],
-                        "disable" if data["deprecated"] == 1 else "enable", data["quote_count"]
-                    )} """)
-
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set `desc`=null where `desc`='' """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set `data_text`=null where `data_text`='' """)
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_case_suite():
-        tabel_name = 'api_test_case_suite'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user, name, num, parent, project_id, 
-                        suite_type
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"],
-                        "make_data" if data["suite_type"] == "assist" else data["suite_type"]
-                    )} """)
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set parent=null where parent=-1 """)
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_case():
-        tabel_name = 'api_test_case'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user,
-                        name, num, `desc`, status, run_times, script_list, 
-                        variables, output, skip_if, suite_id, headers
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"], data["script_list"],
-                        data["variables"], data["output"], data["skip_if"], data["suite_id"], data["headers"]
-                    )} """)
-
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-
-        to_connect.execute(f""" update {to_db}.{tabel_name} set num=0 where num=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set `desc`=null where `desc`='' """)
-
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_step():
-        tabel_name = 'api_test_step'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user, 
-                        name, num, case_id, api_id, time_out,
-                        up_func, down_func, headers, params, body_type,
-                         data_form, data_urlencoded, data_json, data_text, extracts, 
-                         validates, data_driver, quote_case, replace_host, skip_if, 
-                         status, skip_on_fail, pop_header_filed
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["case_id"], data["api_id"] or -1, data["time_out"],
-                        data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["headers"], data["params"], data["data_type"],
-                        data["data_form"], data["data_urlencoded"], data["data_json"], data["data_text"] or '', data["extracts"],
-                        data["validates"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["replace_host"], data["skip_if"],
-                        "disable" if data["status"] == 0 else "enable", data["skip_on_fail"],
-                        '[]' if data["pop_header_filed"] in [None, '', 'null'] else data["pop_header_filed"]
-                    )} """)
-
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-
-        to_connect.execute(f""" update {to_db}.{tabel_name} set api_id=null where api_id=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set `quote_case`=null where `quote_case`=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set `data_text`=null where `data_text`='' """)
-
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_task():
-        tabel_name = 'api_test_task'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user,
-                        name, num, env_list, case_ids, task_type, cron, 
-                        is_send, 
-                        receive_type, webhook_list, email_server, email_from, 
-                        email_pwd, email_to, status, is_async, suite_ids, 
-                        call_back, project_id, conf, skip_holiday
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["env_list"], data["case_ids"], data["task_type"], data["cron"],
-                        "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
-                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
-                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
-                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
-                    )} """)
-
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-
-        to_connect.execute(f""" update {to_db}.{tabel_name} set conf='{json.dumps({})}' where conf='null' """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set num=0 where num=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set `receive_type`=null where `receive_type`='' """)
-
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_report():
-        tabel_name = 'api_test_report'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user,
-                        name, status, is_passed, run_type, project_id, 
-                        env,  trigger_type, process, retry_count, run_id, 
-                        temp_variables, batch_id, summary
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["status"], data["is_passed"], data["run_type"], data["project_id"],
-                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["run_id"],
-                        format_temp_variables(data["temp_variables"]), data["batch_id"], format_report_summary(json.loads(data["summary"]))
-                    )} """)
-
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-                print(f'{max_id["max(id)"]} => {i}')
-
-        # to_connect.execute(f""" update {to_db}.{tabel_name} set temp_variables='{}' where temp_variables='null' """)
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_report_case():
-        tabel_name = 'api_test_report_case'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user,
-                        name, case_id, report_id, result, case_data, 
-                        summary,  error_msg
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["from_id"], data["report_id"], data["result"], data["case_data"],
-                        format_report_case_summary(json.loads(data["summary"])), data["error_msg"] or ''
-                    )} """)
-
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-                print(f'{max_id["max(id)"]} => {i}')
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    def migration_report_step():
-        tabel_name = 'api_test_report_step'
-        count, start_at = 0, datetime.datetime.now()
-        print(f'开始执行【{tabel_name}】数据迁移')
-        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
-        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
-        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
-        if max_id["max(id)"] and max_id["max(id)"] > 0:
-            for i in range(max_id["max(id)"] + 1):
-                if i < min_id["min(id)"]:
-                    continue
-                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
-                if data:
-                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
-                        id, create_time, update_time, create_user, update_user,
-                        name, case_id, step_id, report_case_id, report_id, 
-                        process, result, step_data, summary, api_id
-                    )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"],
-                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["from_id"]
-                    )} """)
-
-                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
-                    assert db_data["id"]
-                    count += 1
-                print(f'{max_id["max(id)"]} => {i}')
-        to_connect.execute(f""" update {to_db}.{tabel_name} set step_id=null where step_id=-1 """)
-        to_connect.execute(f""" update {to_db}.{tabel_name} set case_id=null where case_id=-1 """)
-        print(f'【{tabel_name}】数据迁移完毕')
-        end_at = datetime.datetime.now()
-        return {"start_at": start_at, "end_at": end_at, "count": count}
-
-    send_msg({
-        "api_project": migration_project(),
-        "api_project_env": migration_project_env(),
-        "api_api": migration_api(),
-        "api_case_suite": migration_case_suite(),
-        "api_case": migration_case(),
-        "api_step": migration_step(),
-        "api_task": migration_task(),
-        "api_report": migration_report(),
-        "api_report_case": migration_report_case(),
-        "api_report_step": migration_report_step()
-    })
-
-
 def migration_ui_test():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
     def migration_project():
         tabel_name = 'web_ui_test_project'
         count, start_at = 0, datetime.datetime.now()
@@ -1381,6 +992,8 @@ def migration_ui_test():
 
 
 def migration_app_test():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
     def migration_project():
         tabel_name = 'app_ui_test_project'
         count, start_at = 0, datetime.datetime.now()
@@ -1784,6 +1397,8 @@ def migration_app_test():
 
 
 def migration_auto_test():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
     def migration_auto_test_hits():
         tabel_name = 'auto_test_hits'
         count, start_at = 0, datetime.datetime.now()
@@ -1983,12 +1598,436 @@ def migration_auto_test():
     })
 
 
+def migration_api_test():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
+    def migration_project():
+        tabel_name = 'api_test_project'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user, name, manager, script_list, swagger, num, last_pull_status, business_id
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], data["manager"], data["script_list"], data["swagger"], -1 if data["num"] is None else data["num"], data["last_pull_status"], data["business_id"]
+                    )} """)
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    def migration_project_env():
+        tabel_name = 'api_test_project_env'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user, host, variables, env_id, project_id, headers
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["host"], data["variables"], data["env_id"], data["project_id"], data["headers"]
+                    )} """)
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    def migration_module():
+        tabel_name = 'api_test_module'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user, name, num, parent, project_id, controller
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"], data["controller"] or ''
+                    )} """)
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set parent=null where parent=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set controller=null where controller='' """)
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    def migration_case_suite():
+        tabel_name = 'api_test_case_suite'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user, name, num, parent, project_id, 
+                        suite_type
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"],
+                        "make_data" if data["suite_type"] == "assist" else data["suite_type"]
+                    )} """)
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set parent=null where parent=-1 """)
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    def migration_case():
+        tabel_name = 'api_test_case'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user,
+                        name, num, `desc`, status, run_times, script_list, 
+                        variables, output, skip_if, suite_id, headers
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"], data["script_list"],
+                        data["variables"], data["output"], data["skip_if"], data["suite_id"], data["headers"]
+                    )} """)
+
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+
+        to_connect.execute(f""" update {to_db}.{tabel_name} set num=0 where num=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set `desc`=null where `desc`='' """)
+
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    def migration_task():
+        tabel_name = 'api_test_task'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user,
+                        name, num, env_list, case_ids, task_type, cron, 
+                        is_send, 
+                        receive_type, webhook_list, email_server, email_from, 
+                        email_pwd, email_to, status, is_async, suite_ids, 
+                        call_back, project_id, conf, skip_holiday
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], -1 if data["num"] is None else data["num"], data["env_list"], data["case_ids"], data["task_type"], data["cron"],
+                        "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
+                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
+                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
+                        data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
+                    )} """)
+
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+
+        to_connect.execute(f""" update {to_db}.{tabel_name} set conf='{json.dumps({})}' where conf='null' """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set num=0 where num=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set `receive_type`=null where `receive_type`='' """)
+
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    send_msg({
+        "api_project": migration_project(),
+        "api_project_env": migration_project_env(),
+        "api_case_suite": migration_case_suite(),
+        "api_case": migration_case(),
+        "api_task": migration_task()
+    })
+
+
+def migration_api_test_api():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
+    def migration_api():
+        tabel_name = 'api_test_api'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user, 
+                        name, num, `desc`, project_id, module_id, time_out,
+                        addr, up_func, down_func, method, level, headers,
+                        params, body_type, data_form, data_urlencoded, data_json, 
+                        data_text, response, extracts, validates, 
+                        status, quote_count
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["project_id"], data["module_id"], data["time_out"],
+                        data["addr"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["method"], data["level"], data["headers"],
+                        data["params"], data["data_type"], data["data_form"], data["data_urlencoded"], data["data_json"],
+                        data["data_text"] or '', data["response"] or '{}', data["extracts"], data["validates"],
+                        "disable" if data["deprecated"] == 1 else "enable", data["quote_count"]
+                    )} """)
+
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+        to_connect.execute(f""" update {to_db}.{tabel_name} set num=null where num=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set `desc`=null where `desc`='' """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set `data_text`=null where `data_text`='' """)
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    send_msg({
+        "api_api": migration_api()
+    })
+
+
+def migration_api_test_step():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
+    def migration_step():
+        tabel_name = 'api_test_step'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user, 
+                        name, num, case_id, api_id, time_out,
+                        up_func, down_func, headers, params, body_type,
+                         data_form, data_urlencoded, data_json, data_text, extracts, 
+                         validates, data_driver, quote_case, replace_host, skip_if, 
+                         status, skip_on_fail, pop_header_filed
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], -1 if data["num"] is None else data["num"], data["case_id"], data["api_id"] or -1, data["time_out"],
+                        data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["headers"], data["params"], data["data_type"],
+                        data["data_form"], data["data_urlencoded"], data["data_json"], data["data_text"] or '', data["extracts"],
+                        data["validates"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["replace_host"], data["skip_if"],
+                        "disable" if data["status"] == 0 else "enable", data["skip_on_fail"],
+                        '[]' if data["pop_header_filed"] in [None, '', 'null'] else data["pop_header_filed"]
+                    )} """)
+
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+
+        to_connect.execute(f""" update {to_db}.{tabel_name} set api_id=null where api_id=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set `quote_case`=null where `quote_case`=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set `data_text`=null where `data_text`='' """)
+
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    send_msg({
+        "api_step": migration_step()
+    })
+
+
+def migration_api_test_report():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
+    def migration_report():
+        tabel_name = 'api_test_report'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user,
+                        name, status, is_passed, run_type, project_id, 
+                        env,  trigger_type, process, retry_count, run_id, 
+                        temp_variables, batch_id, summary
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], data["status"], data["is_passed"], data["run_type"], data["project_id"],
+                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["run_id"],
+                        format_temp_variables(data["temp_variables"]), data["batch_id"], format_report_summary(json.loads(data["summary"]))
+                    )} """)
+
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+                print(f'{max_id["max(id)"]} => {i}')
+
+        # to_connect.execute(f""" update {to_db}.{tabel_name} set temp_variables='{}' where temp_variables='null' """)
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    send_msg({
+        "api_report": migration_report()
+    })
+
+
+def migration_api_test_report_case():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
+    def migration_report_case():
+        tabel_name = 'api_test_report_case'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user,
+                        name, case_id, report_id, result, case_data, 
+                        summary,  error_msg
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], data["from_id"], data["report_id"], data["result"], data["case_data"],
+                        format_report_case_summary(json.loads(data["summary"])), data["error_msg"] or ''
+                    )} """)
+
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+                print(f'{max_id["max(id)"]} => {i}')
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    send_msg({
+        "api_report_case": migration_report_case()
+    })
+
+
+def migration_api_test_report_step():
+    from_connect, to_connect = DbOption(from_db_info), DbOption(from_db_info)
+
+    def migration_report_step():
+        tabel_name = 'api_test_report_step'
+        count, start_at = 0, datetime.datetime.now()
+        print(f'开始执行【{tabel_name}】数据迁移')
+        to_connect.execute(f""" truncate {to_db}.{tabel_name}; """)
+        max_id = from_connect.fetchone(f""" select max(id) from {from_db}.{tabel_name} """)
+        min_id = from_connect.fetchone(f""" select min(id) from {from_db}.{tabel_name} """)
+        if max_id["max(id)"] and max_id["max(id)"] > 0:
+            for i in range(max_id["max(id)"] + 1):
+                if i < min_id["min(id)"]:
+                    continue
+                data = from_connect.fetchone(f""" select * from {from_db}.{tabel_name} where id={i} """)
+                if data:
+                    to_connect.execute(f""" insert into {to_db}.{tabel_name} (
+                        id, create_time, update_time, create_user, update_user,
+                        name, case_id, step_id, report_case_id, report_id, 
+                        process, result, step_data, summary, api_id
+                    )  values {(
+                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"],
+                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["from_id"]
+                    )} """)
+
+                    db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
+                    assert db_data["id"]
+                    count += 1
+                print(f'{max_id["max(id)"]} => {i}')
+        to_connect.execute(f""" update {to_db}.{tabel_name} set step_id=null where step_id=-1 """)
+        to_connect.execute(f""" update {to_db}.{tabel_name} set case_id=null where case_id=-1 """)
+        print(f'【{tabel_name}】数据迁移完毕')
+        end_at = datetime.datetime.now()
+        return {"start_at": start_at, "end_at": end_at, "count": count}
+
+    send_msg({
+        "api_report_step": migration_report_step()
+    })
+
+
 if __name__ == '__main__':
     threading.Thread(target=migration_system).start()
     threading.Thread(target=migration_config).start()
     threading.Thread(target=migration_auto_test).start()
-    threading.Thread(target=migration_api_test).start()
     threading.Thread(target=migration_ui_test).start()
     threading.Thread(target=migration_app_test).start()
+    threading.Thread(target=migration_api_test).start()
+    threading.Thread(target=migration_api_test_api).start()
+    threading.Thread(target=migration_api_test_step).start()
+    threading.Thread(target=migration_api_test_report).start()
+    threading.Thread(target=migration_api_test_report_case).start()
+    threading.Thread(target=migration_api_test_report_step).start()
 
     # nohup python3.9 flast_db_to_fastapi.py & tail -f nohup.out
