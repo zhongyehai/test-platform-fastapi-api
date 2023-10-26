@@ -1791,6 +1791,7 @@ def migration_api_test():
     send_msg({
         "api_project": migration_project(),
         "api_project_env": migration_project_env(),
+        "api_module": migration_module(),
         "api_case_suite": migration_case_suite(),
         "api_case": migration_case(),
         "api_task": migration_task()
