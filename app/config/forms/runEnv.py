@@ -12,10 +12,18 @@ class GetRunEnvListForm(PaginationForm):
     code: Optional[str] = Field(title="环境code")
     group: Optional[str] = Field(title="环境分组")
     create_user: Optional[str] = Field(title="创建者")
+    business_id: Optional[int] = Field(title="业务线")
+
+    async def validate_request(self):
+        if self.business_id:
+            env_id_list = await BusinessLine.get_env_list(self.business_id)
+            return {"id__in": env_id_list}
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
-        user, filter_dict = kwargs.get("user"), {}
+        user, filter_dict, validate_filter = kwargs.get("user"), {}, kwargs.get("validate_filter")
+        if self.business_id:
+            filter_dict.update(validate_filter)
         if self.name:
             filter_dict["name__icontains"] = self.name
         if self.code:

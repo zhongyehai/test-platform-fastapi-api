@@ -41,9 +41,10 @@ class BusinessLine(BaseModel):
             await user.model_update({"business_list": user_business_id_list})
 
     @classmethod
-    def get_env_list(cls, business_id):
+    async def get_env_list(cls, business_id):
         """ 根据业务线获取选择的运行环境 """
-        return cls.loads(cls.get_first(id=business_id).env_list)
+        business = await cls.filter(id=business_id).first()
+        return business.env_list
 
     @classmethod
     def make_pagination(cls, form):

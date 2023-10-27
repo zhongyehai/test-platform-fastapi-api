@@ -10,7 +10,8 @@ from ...busines import ProjectEnvBusiness
 
 @config_router.post("/env/list", response_model=List[RunEnvPydantic], summary="获取运行环境列表")
 async def get_run_env_list(form: GetRunEnvListForm, request: Request):
-    query_data = await form.make_pagination(RunEnv)
+    validate_filter = await form.validate_request()
+    query_data = await form.make_pagination(RunEnv, validate_filter=validate_filter)
     return request.app.get_success(data=query_data)
 
 

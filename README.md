@@ -1,4 +1,6 @@
-# 基于 fastapi生态 + tortoise-orm 开发的rest风格的测试平台后端
+# ！此版本短期内不再更新，长期维护版请移步flask版本：https://github.com/zhongyehai/test-platform-fastapi-api
+
+## 基于 fastapi生态 + tortoise-orm 开发的rest风格的测试平台后端
 
     注：
     1.tortoise-ORM 与 pydantic2.x不适配，pydantic_model_creator方法会报错，使用pydantic1.10.9版本

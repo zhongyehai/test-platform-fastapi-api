@@ -69,9 +69,7 @@ class Runner:
 
         self.session_context = SessionContext(self.functions)
 
-        testcase_setup_hooks = config.get("setup_hooks", [])  # 用例级别的前置条件
-        if testcase_setup_hooks:
-            self.do_hook_actions(testcase_setup_hooks)
+        self.do_hook_actions(config.get("setup_hooks", []))  # 用例级别的前置条件
 
     def init_client_session(self):
         """ 根据不同的测试类型获取不同的client_session """
@@ -96,7 +94,7 @@ class Runner:
 
     def __del__(self):
         if self.testcase_teardown_hooks:
-            self.do_hook_actions(self.testcase_teardown_hooks, "teardown")
+            self.do_hook_actions(self.testcase_teardown_hooks)
 
     def __clear_step_test_data(self):
         """ 清除请求和响应数据 """
@@ -143,13 +141,12 @@ class Runner:
             if not self.session_context.eval_content(skip_unless_condition):
                 raise SkipTest(f"skipUnless触发跳过此步骤 \n{skip_unless_condition}")
 
-    def do_hook_actions(self, actions, hook_type="setup"):
+    def do_hook_actions(self, actions):
         """ 执行前置/后置自定义函数
         Args:
             actions (list):
                 格式一，执行完钩子函数后，把返回值保存到变量中 (dict):  {"var": "${func()}"}
                 格式二，仅执行函数 (str): ${func()}
-            hook_type: setup / teardown
         """
         for action in actions:
             if isinstance(action, dict) and len(action) == 1:
@@ -218,9 +215,7 @@ class Runner:
 
         # 执行前置函数
         await self.report_step.test_is_start_before()
-        setup_hooks = step_dict.get("setup_hooks", [])
-        if setup_hooks:
-            self.do_hook_actions(setup_hooks)
+        self.do_hook_actions(step_dict.get("setup_hooks", []))
 
         # 深拷贝除 request 的其他数据，请求数据有可能是io，io不能深拷贝，所以先移出再深拷贝，再移入
         copy_request = self.session_context.test_variables_mapping.pop("request")
@@ -274,9 +269,7 @@ class Runner:
 
         # 后置函数
         await self.report_step.test_is_start_after(self.get_test_step_data())
-        teardown_hooks = step_dict.get("teardown_hooks", [])
-        if teardown_hooks:
-            self.do_hook_actions(teardown_hooks, "teardown")
+        self.do_hook_actions(step_dict.get("teardown_hooks", []))
 
         # 断言
         await self.report_step.test_is_start_validate()

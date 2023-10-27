@@ -202,7 +202,10 @@ class RunCaseForm(BaseForm):
             # 自定义函数
             project_script_list = project.script_list
             project_script_list.extend(case.script_list)
-            all_func_name = await Script.get_func_by_script_id(project_script_list)
+            try:
+                all_func_name = await Script.get_func_by_script_id(project_script_list)
+            except:
+                raise ValueError('自定义函数导入错误，请检查脚本和语法')
             self.validate_func(all_func_name, content=self.dumps(variables))  # 校验引用的自定义函数
 
             # 变量

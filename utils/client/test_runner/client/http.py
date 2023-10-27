@@ -65,7 +65,7 @@ class HttpSession(requests.Session, BaseSession):
         req_resp_dict["response"]["url"] = resp_obj.url
         req_resp_dict["response"]["status_code"] = resp_obj.status_code
         req_resp_dict["response"]["reason"] = resp_obj.reason
-        req_resp_dict["response"]["cookies"] = resp_obj.cookies or {}
+        req_resp_dict["response"]["cookies"] = requests.utils.dict_from_cookiejar(resp_obj.cookies) if resp_obj.cookies else {}
         req_resp_dict["response"]["encoding"] = resp_obj.encoding
         resp_headers = dict(resp_obj.headers)
         req_resp_dict["response"]["headers"] = resp_headers
