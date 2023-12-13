@@ -1,4 +1,4 @@
-# ！此版本短期内不再更新，长期维护版请移步flask版本：https://github.com/zhongyehai/test-platform-fastapi-api
+# ！此版本短期内不再更新，长期维护版请移步flask版本：https://github.com/zhongyehai/test-platform-api
 
 ## 基于 fastapi生态 + tortoise-orm 开发的rest风格的测试平台后端
 
