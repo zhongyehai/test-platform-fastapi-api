@@ -2,7 +2,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler as _AsyncIOScheduler
 from loguru import logger
 
-from app.system.model_factory import ApschedulerJobs
+from app.models.system.model_factory import ApschedulerJobs
 from utils.parse.parse_cron import parse_cron
 from utils.util.request import request_run_task_api
 

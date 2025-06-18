@@ -5,20 +5,19 @@ import threading
 
 import pymysql
 
-hash_secret_key = ''  # 密码加密字符串，与config.hash_secret_key 一致，否则会导致加密出来的字符串不一致
+password_secret_key = ''  # 密码加密字符串，与config.password_secret_key 一致，否则会导致加密出来的字符串不一致
 
-from_db, to_db = '', ''  # 数据库名
+from_db, to_db = 'test_platform', 'test_platform_fastapi'
 
-from_db_info = {
-    "host": "",
-    "user": "",
-    "password": "",
-    "port": 3306,
-    "charset": "utf8",
+to_db_info = {
+    'host': '',
+    'user': '',
+    'password': '',
+    'port': 3306,
+    'database': '',
 }
 
-to_db_info = from_db_info  # 数据库链接信息
-
+from_db_info = to_db_info
 
 def format_datetime(data, fields=[]):
     for field in fields:
@@ -191,7 +190,7 @@ def get_now():
 
 def password_to_hash(password):
     """ h密码转hash值 """
-    password_and_secret_key = password + hash_secret_key
+    password_and_secret_key = password + password_secret_key
     hash_obj = hashlib.md5(password_and_secret_key.encode('utf-8'))  # 使用md5函数进行加密
     return hash_obj.hexdigest()  # 转换为16进制
 
@@ -219,7 +218,7 @@ def send_msg(res_data):
     print(text)
     import requests
     requests.post(
-        url='',  # 钉钉webhook地址
+        url='https://oapi.dingtalk.com/robot/send?',
         json={
             "msgtype": "markdown",
             "markdown": {
@@ -260,7 +259,7 @@ class DbOption:
         print(f'db.fetchone.res: {data}')
 
         if data:
-            data = format_datetime(data, ["created_time", "update_time"])
+            data = format_datetime(data, ["create_time", "update_time"])
 
         return data
 
@@ -272,7 +271,7 @@ class DbOption:
         data = self.cursor.fetchall()
         print(f'db.fetchall.res: {data}')
 
-        data_list = [format_datetime(d, ["created_time", "update_time"]) for d in data]
+        data_list = [format_datetime(d, ["create_time", "update_time"]) for d in data]
         return data_list
 
 
@@ -295,7 +294,7 @@ def migration_system():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, `desc`, num, source_addr, source_type, source_class
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["desc"] or '', -1 if data["num"] is None else data["num"], data["source_addr"], data["source_type"], data["source_class"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -323,7 +322,7 @@ def migration_system():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, `desc`, extend_role
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["desc"] or '', data["extend_role"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -350,7 +349,7 @@ def migration_system():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, role_id, permission_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["role_id"], data["permission_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -376,11 +375,11 @@ def migration_system():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.system_user 
                     (id, create_time, update_time, create_user, update_user, account, password, name, status, 
-                    business_list, need_change_password) 
+                    business_list, phone_number, email, email_password) 
                     values {
-                    (data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                     data["account"], password_to_hash(data["account"]), data["name"], "enable" if data["status"] == 1 else "disable",
-                     data["business_list"], 1)
+                    (data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                     data["account"], password_to_hash('123456'), data["name"], "enable" if data["status"] == 1 else "disable",
+                     data["business_list"], data["phone_number"], data["email"], data["email_password"])
                     } """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
                     assert db_data["id"]
@@ -405,7 +404,7 @@ def migration_system():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, role_id, user_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["role_id"], data["user_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -432,7 +431,7 @@ def migration_system():
                         id, create_time, update_time, create_user, update_user,
                         ip, url, method, headers, params, data_form, data_json, detail
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["ip"] or '', data["url"], data["method"], data["headers"], data["params"], data["data_form"],
                         data["data_json"], data["detail"]
                     )} """)
@@ -475,7 +474,7 @@ def migration_config():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, `desc`
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["desc"] or ''
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -502,7 +501,7 @@ def migration_config():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, `desc`, value, type
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["desc"] or '', data["value"], data["type"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -532,7 +531,7 @@ def migration_config():
                          receive_type, 
                          webhook_list, bind_env
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["code"], data["env_list"],
                         "not_receive" if data["receive_type"] in ["0", None] else data["receive_type"],
                         data["webhook_list"], data["bind_env"]
@@ -562,7 +561,7 @@ def migration_config():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, num, `desc`, code, `group`
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["code"], data["group"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -601,7 +600,7 @@ def migration_ui_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, manager, script_list, num, business_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["manager"], data["script_list"], -1 if data["num"] is None else data["num"], data["business_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -629,7 +628,7 @@ def migration_ui_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, host, variables, env_id, project_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["host"], data["variables"], data["env_id"], data["project_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -656,7 +655,7 @@ def migration_ui_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, num, parent, project_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -688,7 +687,7 @@ def migration_ui_test():
                         id, create_time, update_time, create_user, update_user, 
                         name, num, `desc`, project_id, module_id, addr
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '',
                         data["project_id"], data["module_id"], data["addr"] or ''
                     )} """)
@@ -719,7 +718,7 @@ def migration_ui_test():
                         id, create_time, update_time, create_user, update_user, 
                         name, num, `desc`, project_id, module_id, `by`, element, wait_time_out, page_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '',
                         data["project_id"], data["module_id"], data["by"], data["element"], data["wait_time_out"], data["page_id"]
                     )} """)
@@ -750,7 +749,7 @@ def migration_ui_test():
                         id, create_time, update_time, create_user, update_user, name, num, parent, project_id, 
                         suite_type
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"],
                         "make_data" if data["suite_type"] == "assist" else data["suite_type"]
                     )} """)
@@ -780,11 +779,11 @@ def migration_ui_test():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, num, `desc`, status, run_times, script_list, 
+                        name, num, `desc`, status, run_times,
                         variables, output, skip_if, suite_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"], data["script_list"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"],
                         data["variables"], data["output"], data["skip_if"], data["suite_id"]
                     )} """)
 
@@ -816,12 +815,13 @@ def migration_ui_test():
                         id, create_time, update_time, create_user, update_user, 
                         name, num, status, run_times, up_func, down_func, 
                         skip_if, skip_on_fail, data_driver, quote_case, case_id, 
-                        wait_time_out, execute_type, send_keys, extracts, validates, element_id
+                        wait_time_out, execute_type, send_keys, extracts, validates, element_id, `desc`
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], "disable" if data["status"] == 0 else "enable", data["run_times"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]',
                         data["skip_if"], data["skip_on_fail"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["case_id"],
-                        data["wait_time_out"], data["execute_type"] or '', data["send_keys"] or '', data["extracts"], data["validates"], data["element_id"] or -1
+                        data["wait_time_out"], data["execute_type"] or '', data["send_keys"] or '', data["extracts"], data["validates"], data["element_id"] or -1,
+                        data["desc"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -855,14 +855,14 @@ def migration_ui_test():
                         name, num, env_list, case_ids, task_type, cron, 
                         is_send, 
                         receive_type, webhook_list, email_server, email_from, 
-                        email_pwd, email_to, status, is_async, suite_ids, 
+                        email_to, status, is_async, suite_ids, 
                         call_back, project_id, conf, skip_holiday
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["env_list"], data["case_ids"], data["task_type"], data["cron"],
                         "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
-                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
-                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
+                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"] or "", data["email_from"] or 0,
+                        data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
                         data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
                     )} """)
 
@@ -894,12 +894,12 @@ def migration_ui_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
                         name, status, is_passed, run_type, project_id, 
-                        env,  trigger_type, process, retry_count, run_id, 
+                        env,  trigger_type, process, retry_count, trigger_id, 
                         temp_variables, batch_id, summary
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["status"], data["is_passed"], data["run_type"], data["project_id"],
-                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["run_id"],
+                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["trigger_id"],
                         format_temp_variables(data["temp_variables"]), data["batch_id"], format_report_summary(json.loads(data["summary"]))
                     )} """)
 
@@ -926,11 +926,11 @@ def migration_ui_test():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, case_id, report_id, result, case_data, 
+                        name, case_id, suite_id, report_id, result, case_data, 
                         summary,  error_msg
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["from_id"], data["report_id"], data["result"], data["case_data"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], data["case_id"], data["suite_id"], data["report_id"], data["result"], data["case_data"],
                         format_report_case_summary(json.loads(data["summary"])), data["error_msg"] or ''
                     )} """)
 
@@ -957,12 +957,12 @@ def migration_ui_test():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, case_id, step_id, report_case_id, report_id, 
+                        name, case_id, step_id, report_case_id, report_id, status,
                         process, result, step_data, summary, element_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"],
-                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["from_id"]
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"], data["status"],
+                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["element_id"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1012,7 +1012,7 @@ def migration_app_test():
                         name, manager, script_list, num, business_id,
                         app_package, app_activity, template_device
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["manager"], data["script_list"], -1 if data["num"] is None else data["num"], data["business_id"],
                         data["app_package"], data["app_activity"], data["template_device"],
                     )} """)
@@ -1041,7 +1041,7 @@ def migration_app_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, host, variables, env_id, project_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["host"], data["variables"], data["env_id"], data["project_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1068,7 +1068,7 @@ def migration_app_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, num, parent, project_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1099,7 +1099,7 @@ def migration_app_test():
                         id, create_time, update_time, create_user, update_user, 
                         name, num, `desc`, project_id, module_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '',
                         data["project_id"], data["module_id"]
                     )} """)
@@ -1129,7 +1129,7 @@ def migration_app_test():
                         id, create_time, update_time, create_user, update_user, 
                         name, num, `desc`, project_id, module_id, `by`, element, wait_time_out, page_id, template_device
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '',
                         data["project_id"], data["module_id"], data["by"], data["element"],
                         data["wait_time_out"], data["page_id"], data["template_device"]
@@ -1160,7 +1160,7 @@ def migration_app_test():
                         id, create_time, update_time, create_user, update_user, name, num, parent, project_id, 
                         suite_type
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"],
                         "make_data" if data["suite_type"] == "assist" else data["suite_type"]
                     )} """)
@@ -1189,11 +1189,11 @@ def migration_app_test():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, num, `desc`, status, run_times, script_list, 
+                        name, num, `desc`, status, run_times, 
                         variables, output, skip_if, suite_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"], data["script_list"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"],
                         data["variables"], data["output"], data["skip_if"], data["suite_id"]
                     )} """)
 
@@ -1224,12 +1224,13 @@ def migration_app_test():
                         id, create_time, update_time, create_user, update_user, 
                         name, num, status, run_times, up_func, down_func, 
                         skip_if, skip_on_fail, data_driver, quote_case, case_id, 
-                        wait_time_out, execute_type, send_keys, extracts, validates, element_id
+                        wait_time_out, execute_type, send_keys, extracts, validates, element_id, `desc`
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], "disable" if data["status"] == 0 else "enable", data["run_times"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]',
                         data["skip_if"], 0 if data["skip_on_fail"] is None else data["skip_on_fail"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["case_id"],
                         data["wait_time_out"], data["execute_type"] or '', data["send_keys"] or '', data["extracts"], data["validates"], data["element_id"] or -1
+                        , data["desc"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1261,14 +1262,14 @@ def migration_app_test():
                         name, num, env_list, case_ids, task_type, cron, 
                         is_send, 
                         receive_type, webhook_list, email_server, email_from, 
-                        email_pwd, email_to, status, is_async, suite_ids, 
+                        email_to, status, is_async, suite_ids, 
                         call_back, project_id, conf, skip_holiday
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], f'["{data["env_list"]}"]', data["case_ids"], data["task_type"], data["cron"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], -1 if data["num"] is None else data["num"], f'{data["env_list"]}', data["case_ids"], data["task_type"], data["cron"],
                         "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
-                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
-                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
+                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"] or "", data["email_from"] or 0,
+                        data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
                         data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
                     )} """)
 
@@ -1299,12 +1300,12 @@ def migration_app_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
                         name, status, is_passed, run_type, project_id, 
-                        env,  trigger_type, process, retry_count, run_id, 
+                        env,  trigger_type, process, retry_count, trigger_id, 
                         temp_variables, batch_id, summary
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["status"], data["is_passed"], data["run_type"], data["project_id"],
-                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["run_id"],
+                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["trigger_id"],
                         format_temp_variables(data["temp_variables"]), data["batch_id"], format_report_summary(json.loads(data["summary"]))
                     )} """)
 
@@ -1331,11 +1332,11 @@ def migration_app_test():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, case_id, report_id, result, case_data, 
+                        name, case_id, suite_id, report_id, result, case_data, 
                         summary,  error_msg
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["from_id"], data["report_id"], data["result"], data["case_data"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], data["case_id"], data["suite_id"], data["report_id"], data["result"], data["case_data"],
                         format_report_case_summary(json.loads(data["summary"])), data["error_msg"] or ''
                     )} """)
 
@@ -1362,12 +1363,12 @@ def migration_app_test():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, case_id, step_id, report_case_id, report_id, 
+                        name, case_id, step_id, report_case_id, report_id, status,
                         process, result, step_data, summary, element_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"],
-                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["from_id"]
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"], data["status"],
+                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["element_id"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1415,11 +1416,11 @@ def migration_auto_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
                         date, hit_type, hit_detail, test_type, report_id, `desc` , 
-                        project_id, env
+                        project_id, env, record_from
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["date"], data["hit_type"], data["hit_detail"], data["test_type"], data["report_id"],
-                        data["desc"] or '', data["project_id"], data["env"]
+                        data["desc"] or '', data["project_id"], data["env"], data["record_from"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1448,7 +1449,7 @@ def migration_auto_test():
                         mobile, company_name, access_token, refresh_token, user_id,
                         company_id, password, role, env
                     )  values {(
-                        data["id"], data["created_time"] or get_now(), data["update_time"] or get_now(), data["create_user"] or -1, data["update_user"] or data["create_user"] or -1,
+                        data["id"], data["create_time"] or get_now(), data["update_time"] or get_now(), data["create_user"] or -1, data["update_user"] or data["create_user"] or -1,
                         data["mobile"], data["company_name"] or '', data["access_token"], data["refresh_token"], data["user_id"] or '',
                         data["company_id"] or '', data["password"] or '', data["role"] or '', data["env"]
                     )} """)
@@ -1480,7 +1481,7 @@ def migration_auto_test():
                         id, create_time, update_time, create_user, update_user,
                         name, detail
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["detail"]
                     )} """)
 
@@ -1510,7 +1511,7 @@ def migration_auto_test():
                         id, create_time, update_time, create_user, update_user,
                         name, script_data, `desc`, num, script_type
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["script_data"], data["desc"], -1 if data["num"] is None else data["num"], data["script_type"]
                     )} """)
 
@@ -1541,7 +1542,7 @@ def migration_auto_test():
                         id, create_time, update_time, create_user, update_user,
                         status, project_id, `desc`, pull_args
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["status"], data["project_id"], data["desc"] or '', data["pull_args"] or '[]'
                     )} """)
 
@@ -1572,7 +1573,7 @@ def migration_auto_test():
                         business, name, num, source_type, 
                         value, password, `desc`, parent
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["business"] or -1, data["name"], -1 if data["num"] is None else data["num"], data["source_type"],
                         data["value"], data["password"], data["desc"] or '', data["parent"] or -1
                     )} """)
@@ -1617,8 +1618,8 @@ def migration_api_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, manager, script_list, swagger, num, last_pull_status, business_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["manager"], data["script_list"], data["swagger"], -1 if data["num"] is None else data["num"], data["last_pull_status"], data["business_id"]
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], data["manager"], data["script_list"], data["swagger"] or "", -1 if data["num"] is None else data["num"], data["last_pull_status"], data["business_id"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
                     assert db_data["id"]
@@ -1644,7 +1645,7 @@ def migration_api_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, host, variables, env_id, project_id, headers
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["host"], data["variables"], data["env_id"], data["project_id"], data["headers"]
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1670,7 +1671,7 @@ def migration_api_test():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, name, num, parent, project_id, controller
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"], data["controller"] or ''
                     )} """)
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1700,7 +1701,7 @@ def migration_api_test():
                         id, create_time, update_time, create_user, update_user, name, num, parent, project_id, 
                         suite_type
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["parent"] or -1, data["project_id"],
                         "make_data" if data["suite_type"] == "assist" else data["suite_type"]
                     )} """)
@@ -1728,11 +1729,11 @@ def migration_api_test():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, num, `desc`, status, run_times, script_list, 
+                        name, num, `desc`, status, run_times, 
                         variables, output, skip_if, suite_id, headers
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"], data["script_list"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["status"], data["run_times"],
                         data["variables"], data["output"], data["skip_if"], data["suite_id"], data["headers"]
                     )} """)
 
@@ -1765,14 +1766,14 @@ def migration_api_test():
                         name, num, env_list, case_ids, task_type, cron, 
                         is_send, 
                         receive_type, webhook_list, email_server, email_from, 
-                        email_pwd, email_to, status, is_async, suite_ids, 
+                        email_to, status, is_async, suite_ids, 
                         call_back, project_id, conf, skip_holiday
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["env_list"], data["case_ids"], data["task_type"], data["cron"],
                         "not_send" if data["is_send"] == "1" else "always" if data["is_send"] == "2" else "on_fail",
-                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"], data["email_from"],
-                        data["email_pwd"], data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
+                        data["receive_type"] or '', data["webhook_list"] or '[]', data["email_server"] or "", data["email_from"] or 0,
+                        data["email_to"] or '[]', "disable" if data["status"] == 0 else "enable", 0, data["suite_ids"],
                         data["call_back"] or '[]', data["project_id"], '{}' if data["conf"] is None or data["conf"] == 'null' else data["conf"], 1
                     )} """)
 
@@ -1817,17 +1818,17 @@ def migration_api_test_api():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user, 
                         name, num, `desc`, project_id, module_id, time_out,
-                        addr, up_func, down_func, method, level, headers,
+                        addr, method, level, headers,
                         params, body_type, data_form, data_urlencoded, data_json, 
                         data_text, response, extracts, validates, 
-                        status, quote_count
+                        status, use_count, mock_response
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["desc"] or '', data["project_id"], data["module_id"], data["time_out"],
-                        data["addr"], data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["method"], data["level"], data["headers"],
-                        data["params"], data["data_type"], data["data_form"], data["data_urlencoded"], data["data_json"],
+                        data["addr"], data["method"], data["level"], data["headers"],
+                        data["params"], data["body_type"], data["data_form"], data["data_urlencoded"], data["data_json"],
                         data["data_text"] or '', data["response"] or '{}', data["extracts"], data["validates"],
-                        "disable" if data["deprecated"] == 1 else "enable", data["quote_count"]
+                        "disable" if data["status"] == 0 else "enable", data["use_count"], data["mock_response"] or '{}'
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1867,15 +1868,16 @@ def migration_api_test_step():
                         up_func, down_func, headers, params, body_type,
                          data_form, data_urlencoded, data_json, data_text, extracts, 
                          validates, data_driver, quote_case, replace_host, skip_if, 
-                         status, skip_on_fail, pop_header_filed
+                         status, skip_on_fail, pop_header_filed, `desc`
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], -1 if data["num"] is None else data["num"], data["case_id"], data["api_id"] or -1, data["time_out"],
-                        data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["headers"], data["params"], data["data_type"],
+                        data["up_func"] if data["up_func"] else '[]', data["down_func"] if data["down_func"] else '[]', data["headers"], data["params"], data["body_type"],
                         data["data_form"], data["data_urlencoded"], data["data_json"], data["data_text"] or '', data["extracts"],
                         data["validates"], '[]' if data["data_driver"] in [None, 'null'] else data["data_driver"], data["quote_case"] or -1, data["replace_host"], data["skip_if"],
                         "disable" if data["status"] == 0 else "enable", data["skip_on_fail"],
-                        '[]' if data["pop_header_filed"] in [None, '', 'null'] else data["pop_header_filed"]
+                        '[]' if data["pop_header_filed"] in [None, '', 'null'] else data["pop_header_filed"],
+                        data["desc"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)
@@ -1914,12 +1916,12 @@ def migration_api_test_report():
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
                         name, status, is_passed, run_type, project_id, 
-                        env,  trigger_type, process, retry_count, run_id, 
+                        env,  trigger_type, process, retry_count, trigger_id, 
                         temp_variables, batch_id, summary
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
                         data["name"], data["status"], data["is_passed"], data["run_type"], data["project_id"],
-                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["run_id"],
+                        data["env"], data["trigger_type"], data["process"], data["retry_count"], data["trigger_id"],
                         format_temp_variables(data["temp_variables"]), data["batch_id"], format_report_summary(json.loads(data["summary"]))
                     )} """)
 
@@ -1956,11 +1958,11 @@ def migration_api_test_report_case():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, case_id, report_id, result, case_data, 
+                        name, case_id, suite_id, report_id, result, case_data, 
                         summary,  error_msg
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["from_id"], data["report_id"], data["result"], data["case_data"],
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], data["case_id"] or 0, data["suite_id"] or 0, data["report_id"] or 0, data["result"], data["case_data"],
                         format_report_case_summary(json.loads(data["summary"])), data["error_msg"] or ''
                     )} """)
 
@@ -1995,12 +1997,12 @@ def migration_api_test_report_step():
                 if data:
                     to_connect.execute(f""" insert into {to_db}.{tabel_name} (
                         id, create_time, update_time, create_user, update_user,
-                        name, case_id, step_id, report_case_id, report_id, 
-                        process, result, step_data, summary, api_id
+                        name, case_id, step_id, report_case_id, report_id, status,
+                        process, result, step_data, summary, element_id
                     )  values {(
-                        data["id"], data["created_time"], data["update_time"], data["create_user"], data["update_user"] or data["create_user"],
-                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"],
-                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["from_id"]
+                        data["id"], data["create_time"], data["update_time"], data["create_user"] or 1, data["update_user"] or data["create_user"] or 1,
+                        data["name"], data["case_id"] or -1, data["step_id"] or -1, data["report_case_id"], data["report_id"], data["status"],
+                        data["process"], data["result"], format_step_data(data["step_data"]), format_report_step_summary(json.loads(data["summary"])), data["element_id"]
                     )} """)
 
                     db_data = to_connect.fetchone(f""" select * from {to_db}.{tabel_name} where id={data["id"]} """)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 
+from app.models.assist.model_factory import Script
 from . import utils
 from .compat import OrderedDict
 from .parser import extract_functions, parse_function, get_mapping_variable, extract_variables
@@ -8,7 +9,7 @@ from .parser import extract_functions, parse_function, get_mapping_variable, ext
 text_extractor_regexp_compile = re.compile(r".*\(.*\).*")
 
 
-def extract_by_data(
+async def extract_by_data(
         extract_type,
         session_context_variables_mapping: dict,
         session_context,
@@ -37,10 +38,13 @@ def extract_by_data(
 
         # 执行自定义函数
         extract_function_data['args'], extract_function_data['kwargs'] = extract_arg_data, extract_kwarg_data
-        return session_context.FUNCTIONS_MAPPING[extract_function_data['func_name']](
-            *extract_function_data['args'],
-            **extract_function_data['kwargs']
-        )
+
+        func = session_context.FUNCTIONS_MAPPING[extract_function_data['func_name']]
+        return await Script.run_func(func, extract_function_data['args'], extract_function_data['kwargs'])
+        # return session_context.FUNCTIONS_MAPPING[extract_function_data['func_name']](
+        #     *extract_function_data['args'],
+        #     **extract_function_data['kwargs']
+        # )
     else:
         if extract_type == "const":  # 常量
             return value
@@ -65,7 +69,7 @@ def extract_by_element(driver, value: dict):
     return action_func((value.get('by_type'), value.get('element')))
 
 
-def extract_data(session_context, driver, extractors):
+async def extract_data(session_context, driver, extractors):
     """ 执行数据提取，并储存到 OrderedDict对象
     Args:
         extractors (list):
@@ -86,7 +90,7 @@ def extract_data(session_context, driver, extractors):
     for extractor in extractors:
         result = None
         if extractor['type'] in ('const', 'func', 'variable'):  # 自定义函数、变量
-            result = extract_by_data(
+            result = await extract_by_data(
                 extractor['type'],
                 session_context_variables_mapping,
                 session_context,

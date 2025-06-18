@@ -1,22 +1,25 @@
+import copy
 import types
 import importlib
-from threading import Thread
 
-from app.api_test.model_factory import ApiProject, ApiProjectEnv, ApiCaseSuite, ApiCase, ApiStep, ApiMsg, ApiReport
-from app.enums import TriggerTypeEnum
-from app.ui_test.model_factory import WebUiProject, WebUiProjectEnv, WebUiElement, WebUiCaseSuite, WebUiCase, WebUiStep, \
-    WebUiReport
-from app.app_test.model_factory import AppUiProject, AppUiProjectEnv, AppUiElement, AppUiCaseSuite, AppUiCase, \
-    AppUiStep, AppUiReport
-from app.config.model_factory import RunEnv
+from app.models.autotest.model_factory import ApiProject, ApiProjectEnv, ApiCaseSuite, ApiCase, ApiStep, ApiMsg, \
+    ApiReport, ApiReportCase, ApiReportStep, UiProject, UiProjectEnv, UiElement, UiCaseSuite, UiCase, \
+    UiStep, \
+    UiReport, UiReportCase, UiReportStep, AppProject, AppProjectEnv, AppElement, AppCaseSuite, \
+    AppCase, \
+    AppStep, AppReport, AppReportCase, AppReportStep
+from app.models.assist.hits import Hits
+from app.models.config.webhook import WebHook
+from app.schemas.enums import TriggerTypeEnum, ReceiveTypeEnum
+from app.models.system.user import User
+from app.models.config.model_factory import RunEnv
 
-from app.assist.model_factory import Script
-from app.config.model_factory import Config
+from app.models.assist.model_factory import Script
+from app.models.config.model_factory import Config
 from utils.client.test_runner.api import TestRunner
 from utils.client.test_runner.utils import build_url
 # from utils.log import logger
 from loguru import logger
-from utils.parse.parse import encode_object
 from utils.client.parse_model import ProjectModel, ApiModel, CaseModel, ElementModel
 from utils.message.send_report import send_report, call_back_for_pipeline
 from utils.client.test_runner import validate_func
@@ -24,20 +27,29 @@ from utils.client.test_runner import validate_func
 
 class RunTestRunner:
 
-    def __init__(self, project_id=None, name=None, report=None, env_code=None, env_name=None,
-                 trigger_type=TriggerTypeEnum.PAGE, is_rollback=False, run_type="api", task_dict={}, extend={}):
+    def __init__(self, report_id=None, env_code=None, env_name=None, run_type="api", extend={}, task_dict={}):
         self.env_code = env_code  # 运行环境id
         self.env_name = env_name  # 运行环境名，用于发送即时通讯
         self.extend = extend
-        self.project_id = project_id
-        self.report = report
-        self.run_name = name
-        self.is_rollback = is_rollback
-        self.trigger_type = trigger_type
+        self.report_id = report_id
         self.run_type = run_type
         self.task_dict = task_dict
+
+        self.time_out = 60
+        self.wait_time_out = 5
+        self.count_step = 0
+        self.api_set = set()
+        self.element_set = set()
+        self.parsed_project_dict = {}
+        self.parsed_case_dict = {}
+        self.parsed_api_dict = {}
+        self.parsed_element_dict = {}
+        self.run_env = None
+        self.report = None
+        self.response_time_level = {"slow": 0, "very_slow": 0}
         self.api_model = ApiMsg
         self.element_model = None
+
         match self.run_type:
             case "api":  # 接口自动化
                 self.project_model = ApiProject
@@ -46,47 +58,61 @@ class RunTestRunner:
                 self.case_model = ApiCase
                 self.step_model = ApiStep
                 self.report_model = ApiReport
-            case "webUi":  # web-ui自动化
-                self.project_model = WebUiProject
-                self.project_env_model = WebUiProjectEnv
-                self.element_model = WebUiElement
-                self.suite_model = WebUiCaseSuite
-                self.case_model = WebUiCase
-                self.step_model = WebUiStep
-                self.report_model = WebUiReport
+                self.report_case_model = ApiReportCase
+                self.report_step_model = ApiReportStep
+                # self.time_out = Config.get_request_time_out()  # TODO await
+                # self.response_time_level = Config.get_response_time_level()  # TODO await
+                # self.front_report_addr = f'{Config.get_report_host()}{Config.get_api_report_addr()}'  # TODO await
+            case "ui":  # web-ui自动化
+                self.project_model = UiProject
+                self.project_env_model = UiProjectEnv
+                self.element_model = UiElement
+                self.suite_model = UiCaseSuite
+                self.case_model = UiCase
+                self.step_model = UiStep
+                self.report_model = UiReport
+                self.report_case_model = UiReportCase
+                self.report_step_model = UiReportStep
+                # self.wait_time_out = Config.get_wait_time_out() # TODO await
+                # self.front_report_addr = f'{Config.get_report_host()}{Config.get_web_ui_report_addr()}' # TODO await
             case _:  # app-ui自动化
-                self.project_model = AppUiProject
-                self.project_env_model = AppUiProjectEnv
-                self.element_model = AppUiElement
-                self.suite_model = AppUiCaseSuite
-                self.case_model = AppUiCase
-                self.step_model = AppUiStep
-                self.report_model = AppUiReport
+                self.project_model = AppProject
+                self.project_env_model = AppProjectEnv
+                self.element_model = AppElement
+                self.suite_model = AppCaseSuite
+                self.case_model = AppCase
+                self.step_model = AppStep
+                self.report_model = AppReport
+                self.report_case_model = AppReportCase
+                self.report_step_model = AppReportStep
+                # self.wait_time_out = Config.get_wait_time_out()
+                # self.front_report_addr = f'{Config.get_report_host()}{Config.get_app_ui_report_addr()}' # TODO await
 
+        # testRunner需要的数据格式
+        self.test_plan = {
+            "is_async": 0,
+            "run_type": self.run_type,
+            "report_id": self.report_id,
+            "report_model": self.report_model,
+            "report_case_model": self.report_case_model,
+            "report_step_model": self.report_step_model,
+            "response_time_level": self.response_time_level,
+            # "pause_step_time_out": Config.get_pause_step_time_out(),
+            "project_mapping": {
+                "functions": {},
+                "variables": {},
+            },
+            "report_case_list": [],  # 用例
+        }
+
+        self.init_parsed_data()
+
+    def init_parsed_data(self):
         self.parsed_project_dict = {}
         self.parsed_case_dict = {}
         self.parsed_api_dict = {}
         self.parsed_element_dict = {}
-
-        self.count_step = 0
-        self.api_set = set()
-        self.element_set = set()
         self.run_env = None
-
-        # testRunner需要的数据格式
-        self.DataTemplate = {
-            "is_async": 0,
-            "project": self.run_name,
-            "run_type": self.run_type,
-            "report": self.report,
-            "project_mapping": {
-                "functions": {},
-                "variables": {}
-            },
-            "testsuites": [],  # 用例集
-            "case_list": [],  # 用例
-            "apis": [],  # 接口
-        }
 
     async def get_report_addr(self):
         """ 获取报告前端地址 """
@@ -94,7 +120,7 @@ class RunTestRunner:
         if self.run_type == "api":  # 接口自动化
             report_addr = await Config.get_api_report_addr()
             return f'{report_host}{report_addr}'
-        elif self.run_type == "webUi":  # web-ui自动化
+        elif self.run_type == "ui":  # web-ui自动化
             report_addr = await Config.get_web_ui_report_addr()
             return f'{report_host}{report_addr}'
         else:  # app-ui自动化
@@ -122,7 +148,6 @@ class RunTestRunner:
             case = await self.case_model.filter(id=case_id).first()
             if not case:
                 return  # 可能存在任务选择了用例，在那边直接把这条用例删掉了的情况
-            await self.parse_functions(case.script_list)
             self.parsed_case_dict.update({case_id: CaseModel(**dict(case))})
         return self.parsed_case_dict[case_id]
 
@@ -133,22 +158,26 @@ class RunTestRunner:
             self.parsed_element_dict.update({element_id: ElementModel(**dict(element))})
         return self.parsed_element_dict[element_id]
 
-    async def get_format_api(self, project, api):
+    async def get_format_api(self, project, api_id=None, api_obj=None):
         """ 从已解析的接口字典中取指定id的接口，如果没有，则取出来解析后放进去 """
-        if api.id not in self.parsed_api_dict:
+        if api_obj:
+            api_id = api_obj.id
+        if api_id not in self.parsed_api_dict:
+            api = api_obj or await ApiMsg.filter(id=api_id).first()
             if api.project_id not in self.parsed_project_dict:
                 project = await self.project_model.filter(id=api.project_id).first()
                 await self.parse_functions(project.script_list)
             self.parsed_api_dict.update({api.id: self.parse_api(project, ApiModel(**dict(api)))})
-        return self.parsed_api_dict[api.id]
+        return self.parsed_api_dict[api_id]
 
-    async def parse_functions(self, script_id_list):
-        """ 获取指定脚本中的自定义函数 """
-        script_list = await Script.filter(id__in=script_id_list).all()
-        for script in script_list:
-            script_data = importlib.reload(importlib.import_module(f'script_list.{self.env_code}_{script.name}'))
-            self.DataTemplate["project_mapping"]["functions"].update({
-                name: item for name, item in vars(script_data).items() if isinstance(item, types.FunctionType)
+    async def parse_functions(self, func_file_id_list):
+        """ 获取自定义函数 """
+        for func_file_id in func_file_id_list:
+            query_set = await Script.filter(id=func_file_id).values("name")
+            func_file_data = importlib.reload(
+                importlib.import_module(f'script_list.{self.env_code}_{query_set[0]["name"]}'))
+            self.test_plan["project_mapping"]["functions"].update({
+                name: item for name, item in vars(func_file_data).items() if isinstance(item, types.FunctionType)
             })
 
     def parse_case_is_skip(self, skip_if_list, server_id=None, phone_id=None):
@@ -180,9 +209,9 @@ class RunTestRunner:
             "name": step.name,
             "setup_hooks": step.up_func,
             "teardown_hooks": step.down_func,
-            "skip": not step.status,  # 无条件跳过当前测试
-            "skipIf": step.skip_if,  # 如果条件为真，则跳过当前测试
-            # "skipUnless": "",  # 除非条件为真，否则跳过当前测试
+            # "skip": not step.status,  # 无条件跳过当前测试
+            "skip_if": step.skip_if,  # 如果条件为真，则跳过当前测试
+            # "skip_unless": "",  # 除非条件为真，否则跳过当前测试
             "times": step.run_times,  # 运行次数
             "extract": step.extracts,  # 要提取的信息
             "validate": step.validates,  # 断言信息
@@ -193,7 +222,7 @@ class RunTestRunner:
                 # 如果是打开页面，则设置为项目域名+页面地址
                 "element": build_url(project.host, element.element) if element.by == "url" else element.element,
                 "text": step.send_keys,
-                "wait_time_out": float(step.wait_time_out or element.wait_time_out)
+                "wait_time_out": float(step.wait_time_out or element.wait_time_out or self.wait_time_out)
             }
         }
 
@@ -203,90 +232,150 @@ class RunTestRunner:
         await self.report.save_report_start()
         await self.report.update_report_result(result["result"], summary=result)
         await self.report.save_report_finish()
+        await self.push_hit_if_fail(result["result"])
         logger.info(f'测试报告保存完成')
 
         # 有可能是多环境一次性批量运行，根据batch_id查是否全部运行完毕
         if await self.report_model.select_is_all_done_by_batch_id(self.report.batch_id):
-            not_passed_report = await self.report_model.filter(batch_id=self.report.batch_id, is_passed=0).first()
-            if not_passed_report:
-                await self.send_report_if_task(not_passed_report.id, not_passed_report.summary)  # 发送报告
-            await self.send_report_if_task(self.report.id, result)  # 发送报告
+            if self.task_dict.get("merge_notify") != 1:  # 不合并通知
+                # 有失败的，则获取失败的报告, 否则只发送当前测试结果的报告
+                not_passed = await self.report_model.filter(batch_id=self.report.batch_id, is_passed=0).first().values(
+                    "id", "summary")
+
+                if not_passed:
+                    report_id, report_summary = not_passed["id"], not_passed["summary"]
+                else:
+                    report_id, report_summary = self.report.id, result
+
+                if self.run_type == "api":  # 接口自动化，为了报告的精准性，慢接口的统计精确到接口个数
+                    report_summary["stat"]["response_time"][
+                        "slow"] = await ApiReportStep.get_element_id_by_report_step_id(
+                        report_summary["stat"]["response_time"]["slow"])
+                    report_summary["stat"]["response_time"][
+                        "very_slow"] = await ApiReportStep.get_element_id_by_report_step_id(
+                        report_summary["stat"]["response_time"]["very_slow"])
+                await self.send_report_if_task([{"report_id": report_id, "report_summary": report_summary}])
+            else:  # 合并通知
+                # 获取当前批次下的所有测试报告，summary
+                query_res = await self.report_model.filter(batch_id=self.report.batch_id).all().values("id", "summary")
+                send_list = []
+                if self.run_type == "api":  # 接口自动化，为了报告的精准性，慢接口的统计精确到接口个数
+                    for query in query_res:
+                        summary = query[1]
+                        summary["stat"]["response_time"]["slow"] = await ApiReportStep.get_element_id_by_report_step_id(summary["stat"]["response_time"]["slow"])
+                        summary["stat"]["response_time"]["very_slow"] = await ApiReportStep.get_element_id_by_report_step_id(summary["stat"]["response_time"]["very_slow"])
+                        send_list.append({"report_id": query["id"], "report_summary": summary})
+                else:
+                    send_list = [{"report_id": query["id"], "report_summary": query["summary"]} for query in query_res]
+                await self.send_report_if_task(send_list)
 
     async def run_case(self):
         """ 调 testRunner().run() 执行测试 """
-        logger.info(f'执行测试的数据：\n{self.DataTemplate}')
+        logger.info(f'\n测试执行数据：\n{self.test_plan}')
 
-        if self.DataTemplate.get("is_async", 0):
+        if self.test_plan.get("is_async", 0):
             # 并行执行, 遍历case，以case为维度多线程执行，测试报告按顺序排列
-            run_case_dict = {}
+            run_case_res_dict = {}
             await self.report.run_case_start()
-            for index, case in enumerate(self.DataTemplate["case_list"]):
-                run_case_dict[index] = False  # 用例运行标识，索引：是否运行完成
-                temp_case = self.DataTemplate
-                temp_case["case_list"] = [case]
-                self._async_run_case(temp_case, run_case_dict, index)
+            for index, case in enumerate(self.test_plan["report_case_list"]):
+                run_case_res_dict[index] = False  # 用例运行标识，索引：是否运行完成
+                test_plan = copy.deepcopy(self.test_plan)
+                test_plan["report_case_list"] = [case]
+                # self._async_run_case(temp_case, run_case_dict, index) # TODO 并行执行
         else:  # 串行执行
             await self.sync_run_case()
 
-    async def _run_case(self, case, run_case_dict, index):
-        runner = TestRunner()
-        await runner.run(case)
-        self.update_run_case_status(run_case_dict, index, runner.summary)
+    # async def _run_case(self, case, run_case_dict, index):
+    #     runner = TestRunner()
+    #     await runner.run(case)
+    #     self.update_run_case_status(run_case_dict, index, runner.summary)
+    #
+    # def _async_run_case(self, case, run_case_dict, index):
+    #     """ 多线程运行用例 """
+    #     Thread(target=self._run_case, args=[case, run_case_dict, index]).start()
 
-    def _async_run_case(self, case, run_case_dict, index):
-        """ 多线程运行用例 """
-        Thread(target=self._run_case, args=[case, run_case_dict, index]).start()
+    # def update_run_case_status(self, run_dict, run_index, summary):
+    #     """ 每条用例执行完了都更新对应的运行状态，如果更新后的结果是用例全都运行了，则生成测试报告"""
+    #     run_dict[run_index] = summary
+    #     if all(run_dict.values()):  # 全都执行完毕
+    #         self.report.run_case_finish()
+    #         all_summary = run_dict[0]
+    #         all_summary["stat"]["count"]["step"] = self.count_step
+    #         all_summary["stat"]["count"]["api"] = len(self.api_set)
+    #         all_summary["stat"]["count"]["element"] = len(self.element_set)
+    #         for index, res in enumerate(run_dict.values()):
+    #             if index != 0:
+    #                 self.build_summary(all_summary, res, ["case_list", "step_list"])  # 合并用例统计, 步骤统计
+    #                 # all_summary["details"].extend(res["details"])  # 合并测试用例数据
+    #                 all_summary["success"] = all([all_summary["success"], res["success"]])  # 测试报告状态
+    #                 all_summary["time"]["case_duration"] = summary["time"]["case_duration"]  # 总共耗时取运行最长的
+    #                 all_summary["time"]["step_duration"] = summary["time"]["step_duration"]  # 总共耗时取运行最长的
+    #
+    #         self.save_report_and_send_message(summary)
 
     async def sync_run_case(self):
         """ 单线程运行用例 """
         await self.report.run_case_start()
         runner = TestRunner()
-        await runner.run(self.DataTemplate)
+        await runner.run(self.test_plan)
         await self.report.run_case_finish()
         logger.info(f'测试执行完成，开始保存测试报告和发送报告')
         summary = runner.summary
         summary["stat"]["count"]["step"] = self.count_step
         summary["stat"]["count"]["api"] = len(self.api_set)
         summary["stat"]["count"]["element"] = len(self.element_set)
+        if self.run_type == "api":
+            summary["stat"]["response_time"]["response_time_level"] = self.response_time_level
         await self.save_report_and_send_message(summary)
 
-    def update_run_case_status(self, run_dict, run_index, summary):
-        """ 每条用例执行完了都更新对应的运行状态，如果更新后的结果是用例全都运行了，则生成测试报告"""
-        run_dict[run_index] = summary
-        if all(run_dict.values()):  # 全都执行完毕
-            self.report.run_case_finish()
-            all_summary = run_dict[0]
-            all_summary["stat"]["count"]["step"] = self.count_step
-            all_summary["stat"]["count"]["api"] = len(self.api_set)
-            all_summary["stat"]["count"]["element"] = len(self.element_set)
-            for index, res in enumerate(run_dict.values()):
-                if index != 0:
-                    self.build_summary(all_summary, res, ["case_list", "step_list"])  # 合并用例统计, 步骤统计
-                    # all_summary["details"].extend(res["details"])  # 合并测试用例数据
-                    all_summary["success"] = all([all_summary["success"], res["success"]])  # 测试报告状态
-                    all_summary["time"]["case_duration"] = summary["time"]["case_duration"]  # 总共耗时取运行最长的
-                    all_summary["time"]["step_duration"] = summary["time"]["step_duration"]  # 总共耗时取运行最长的
-
-            self.save_report_and_send_message(summary)
-
-    async def send_report_if_task(self, report_id, res):
+    async def send_report_if_task(self, notify_list):
         """ 发送测试报告 """
         if self.task_dict:
-
-            # 如果是流水线触发的，则回调给流水线
-            if self.trigger_type == TriggerTypeEnum.PIPELINE:
-                logger.info(f'开始回调流水线')
-                await call_back_for_pipeline(
-                    self.task_dict["id"],
-                    self.task_dict["call_back"] or [],
-                    self.extend,
-                    res["result"]
-                )
+            await self.call_back_to_pipeline(notify_list)  # 回调流水线
 
             # 发送测试报告
             logger.info(f'开始发送测试报告')
-            front_report_addr = await self.get_report_addr()
-            send_report(content=res, **self.task_dict, report_id=report_id, report_addr=front_report_addr)
+
+            if self.task_dict["receive_type"] == ReceiveTypeEnum.EMAIL:  # 邮件
+                email_server = await Config.filter(name=self.task_dict["email_server"]).first().values("value")
+                self.task_dict["email_server"] = email_server["value"]
+                email_from = await User.filter(id=self.task_dict["email_from"]).first().values("email", "email_password")
+                self.task_dict["email_from"], self.task_dict["email_pwd"] = email_from["email"], email_from["email_password"]
+                email_to = await User.filter(id__in=self.task_dict["email_to"]).all().values("email")
+                self.task_dict["email_to"] = [email["email"] for email in email_to]
+            else:  # 解析并组装webhook地址并加签
+                self.task_dict["webhook_list"] = await WebHook.get_webhook_list(
+                    self.task_dict["receive_type"], self.task_dict["webhook_list"])
+
+            await send_report(content_list=notify_list, **self.task_dict, report_addr=self.front_report_addr)
+
+    async def call_back_to_pipeline(self, notify_list):
+        """ 如果是流水线触发的，则回调给流水线 """
+        if self.report.trigger_type == TriggerTypeEnum.PIPELINE:
+            all_res = [notify["report_summary"]["result"] for notify in notify_list]
+            await call_back_for_pipeline(
+                self.task_dict["id"],
+                self.task_dict["call_back"] or [],
+                self.extend,
+                "fail" if "fail" in all_res else "success"
+            )
+
+    async def push_hit_if_fail(self, result):
+        """ 如果测试为不通过，且设置了要自动保存问题记录，且处罚类型为定时任务或者流水线触发，则保存 """
+        if self.task_dict:
+            # logger.info(f'开始保存问题记录')
+            if (result == "fail" and self.task_dict["push_hit"] == 1
+                    and self.report.trigger_type in [TriggerTypeEnum.CRON, TriggerTypeEnum.PIPELINE]):
+                await Hits.model_create({
+                    "hit_type": "巡检不通过",
+                    "hit_detail": "",
+                    "test_type": self.run_type,
+                    "project_id": self.report.project_id,
+                    "env": self.env_code,
+                    "record_from": 2,  # 自动记录
+                    "report_id": self.report.id,
+                    "desc": "自动化测试创建"
+                })
 
     @staticmethod
     def parse_api(project, api):
@@ -294,11 +383,9 @@ class RunTestRunner:
         return {
             "id": api.id,
             "name": api.name,  # 接口名
-            "setup_hooks": api.up_func,
-            "teardown_hooks": api.down_func,
             "skip": "",  # 无条件跳过当前测试
-            "skipIf": "",  # 如果条件为真，则跳过当前测试
-            "skipUnless": "",  # 除非条件为真，否则跳过当前测试
+            "skip_if": "",  # 如果条件为真，则跳过当前测试
+            "skip_unless": "",  # 除非条件为真，否则跳过当前测试
             "times": 1,  # 运行次数
             "extract": api.extracts,  # 接口要提取的信息
             "validate": api.validates,  # 接口断言信息
@@ -318,9 +405,8 @@ class RunTestRunner:
         }
 
     @staticmethod
-    def build_summary(source1, source2, fields):
+    def build_summary(source1, source2, field_list):
         """ 合并测试报告统计 """
-        for field in fields:
+        for field in field_list:
             for key in source1["stat"][field]:
-                if key != "project":
-                    source1["stat"][field][key] += source2["stat"][field][key]
+                source1["stat"][field][key] += source2["stat"][field][key]

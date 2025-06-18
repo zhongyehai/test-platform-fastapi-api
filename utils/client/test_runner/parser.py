@@ -3,16 +3,11 @@ import ast
 import json
 import re
 import traceback
-from datetime import datetime
 
+from app.models.assist.model_factory import Script
 from . import exceptions, utils
 from .compat import basestring, builtin_str, numeric_types
 from .validate_func import load_builtin_functions
-from app.assist.model_factory import FuncErrorRecord
-from app.api_test.model_factory import ApiReportCase
-from app.ui_test.model_factory import WebUiReportCase
-from app.app_test.model_factory import AppUiReportCase
-from utils.message.send_report import send_run_func_error_message
 from utils.variables.regexp import variable_regexp, function_regexp, function_regexp_compile
 
 
@@ -196,7 +191,7 @@ def substitute_variables(content, variables_mapping):
     return content
 
 
-def parse_parameters(parameters, variables_mapping=None, functions_mapping=None):
+async def parse_parameters(parameters, variables_mapping=None, functions_mapping=None):
     """ parse parameters and generate cartesian product.
 
     Args:
@@ -248,7 +243,7 @@ def parse_parameters(parameters, variables_mapping=None, functions_mapping=None)
                 parameter_content_list.append(parameter_content_dict)
         else:
             # (2) & (3)
-            parsed_parameter_content = parse_data(parameter_content, variables_mapping, functions_mapping)
+            parsed_parameter_content = await parse_data(parameter_content, variables_mapping, functions_mapping)
             if not isinstance(parsed_parameter_content, list):
                 raise exceptions.ParamsError("parameters syntax error!")
 
@@ -341,7 +336,7 @@ def get_mapping_function(function_name, functions_mapping):
         raise exceptions.FunctionNotFound(f"自定义函数 【{function_name}】 没有找到")
 
 
-def parse_string_functions(content, variables_mapping, functions_mapping):
+async def parse_string_functions(content, variables_mapping, functions_mapping):
     """ 映射字符串中的函数
     Args:
         content (str): "abc${add_one(3)}def"
@@ -353,18 +348,14 @@ def parse_string_functions(content, variables_mapping, functions_mapping):
     functions_list = extract_functions(content)
     for func_content in functions_list:
         function_meta = parse_function(func_content)
-        func_name = function_meta["func_name"]
-
-        args = function_meta.get("args", [])
-        kwargs = function_meta.get("kwargs", {})
-        args = parse_data(args, variables_mapping, functions_mapping)
-        kwargs = parse_data(kwargs, variables_mapping, functions_mapping)
-
-        func = get_mapping_function(func_name, functions_mapping)
-        # eval_value = func(*args, **kwargs)
+        args = await parse_data(function_meta.get("args", []), variables_mapping, functions_mapping)
+        kwargs = await parse_data(function_meta.get("kwargs", {}), variables_mapping, functions_mapping)
+        func = get_mapping_function(function_meta["func_name"], functions_mapping)
         # 执行自定义函数，有可能会报错
         try:
-            eval_value = func(*args, **kwargs)
+
+            # eval_value = func(*args, **kwargs)
+            eval_value = await Script.run_func(func, args, kwargs)
         except Exception as error:
             # 记录错误信息
             # FuncErrorRecord.create(
@@ -396,7 +387,7 @@ def parse_string_functions(content, variables_mapping, functions_mapping):
     return content
 
 
-def parse_string_variables(content, variables_mapping, functions_mapping):
+async def parse_string_variables(content, variables_mapping, functions_mapping):
     """ 从字符串中，解析引用变量
 
     Args:
@@ -421,18 +412,16 @@ def parse_string_variables(content, variables_mapping, functions_mapping):
                 and "url" in variable_value and "method" in variable_value:
             # call setup_hooks action with $request
             for key, value in variable_value.items():
-                variable_value[key] = parse_data(
+                variable_value[key] = await parse_data(
                     value,
                     variables_mapping,
                     functions_mapping
                 )
             parsed_variable_value = variable_value
         elif "${}".format(variable_name) == variable_value:
-            # variable_name = "token"
-            # variables_mapping = {"token": "$token"}
             parsed_variable_value = variable_value
         else:
-            parsed_variable_value = parse_data(
+            parsed_variable_value = await parse_data(
                 variable_value,
                 variables_mapping,
                 functions_mapping,
@@ -456,7 +445,7 @@ def parse_string_variables(content, variables_mapping, functions_mapping):
     return content
 
 
-def parse_data(content, variables_mapping=None, functions_mapping=None, raise_if_variable_not_found=True):
+async def parse_data(content, variables_mapping=None, functions_mapping=None, raise_if_variable_not_found=True):
     """ 用变量映射解析内容
     Args:
         content (str/dict/list/numeric/bool/type): 要解析的内容
@@ -488,7 +477,7 @@ def parse_data(content, variables_mapping=None, functions_mapping=None, raise_if
 
     if isinstance(content, (list, set, tuple)):
         return [
-            parse_data(
+            await parse_data(
                 item,
                 variables_mapping,
                 functions_mapping,
@@ -500,13 +489,13 @@ def parse_data(content, variables_mapping=None, functions_mapping=None, raise_if
     if isinstance(content, dict):
         parsed_content = {}
         for key, value in content.items():
-            parsed_key = parse_data(
+            parsed_key = await parse_data(
                 key,
                 variables_mapping,
                 functions_mapping,
                 raise_if_variable_not_found
             )
-            parsed_value = parse_data(
+            parsed_value = await parse_data(
                 value,
                 variables_mapping,
                 functions_mapping,
@@ -524,10 +513,10 @@ def parse_data(content, variables_mapping=None, functions_mapping=None, raise_if
 
         try:
             # 提取并执行自定义函数
-            content = parse_string_functions(content, variables_mapping, functions_mapping)
+            content = await parse_string_functions(content, variables_mapping, functions_mapping)
 
             # 用公用变量替换字符串中的占位符
-            content = parse_string_variables(content, variables_mapping, functions_mapping)
+            content = await parse_string_variables(content, variables_mapping, functions_mapping)
         except exceptions.VariableNotFound:
             if raise_if_variable_not_found:
                 raise
@@ -535,7 +524,7 @@ def parse_data(content, variables_mapping=None, functions_mapping=None, raise_if
     return content
 
 
-def parse_test_config(config, project_mapping):
+async def parse_test_config(config, project_mapping):
     """ 解析测试用例的配置, 包括变量和名称。"""
     variables_mapping = utils.list_to_dict(config.pop("variables", {}))
     override_variables = utils.deepcopy_dict(project_mapping.get("variables", {}))
@@ -544,20 +533,20 @@ def parse_test_config(config, project_mapping):
     functions = project_mapping.get("functions", {})
 
     for key in variables_mapping:
-        parsed_value = parse_data(variables_mapping[key], variables_mapping, functions, False)
+        parsed_value = await parse_data(variables_mapping[key], variables_mapping, functions, False)
         variables_mapping[key] = parsed_value
         parsed_variables[key] = parsed_value
 
     if parsed_variables:
         config["variables"] = parsed_variables
 
-    config["name"] = parse_data(config.get("name", ""), parsed_variables, functions)
+    config["name"] = await parse_data(config.get("name", ""), parsed_variables, functions)
 
     if "base_url" in config:
-        config["base_url"] = parse_data(config["base_url"], parsed_variables, functions)
+        config["base_url"] = await parse_data(config["base_url"], parsed_variables, functions)
 
 
-def parse_test_step(steps: list, case_config: dict, project_mapping: dict):
+async def parse_test_step(steps: list, case_config: dict, project_mapping: dict):
     """ 解析测试步骤
 
         变量解析优先级:
@@ -589,7 +578,6 @@ def parse_test_step(steps: list, case_config: dict, project_mapping: dict):
     if not case_config.get("browser_type", ''):  # 接口自动化
         config_variables = case_config.get("variables", {})
         config_base_url = case_config.pop("base_url", "")
-        config_verify = case_config.pop("verify", False)
         functions = project_mapping.get("functions", {})
 
         for step_dict in steps:
@@ -601,36 +589,19 @@ def parse_test_step(steps: list, case_config: dict, project_mapping: dict):
             step_dict["variables"] = utils.extend_variables(step_dict.pop("variables", {}), config_variables)
 
             for key in step_dict["variables"]:
-                parsed_key = parse_data(key, step_dict["variables"], functions, False)
-                parsed_value = parse_data(step_dict["variables"][key], step_dict["variables"], functions, False)
+                parsed_key = await parse_data(key, step_dict["variables"], functions, False)
+                parsed_value = await parse_data(step_dict["variables"][key], step_dict["variables"], functions, False)
                 if parsed_key in step_dict["variables"]:
                     step_dict["variables"][parsed_key] = parsed_value
 
             # 测试步骤名字
-            step_dict["name"] = parse_data(step_dict.pop("name", ""), step_dict["variables"], functions, False)
+            step_dict["name"] = await parse_data(step_dict.pop("name", ""), step_dict["variables"], functions, False)
 
             if step_dict.get("base_url"):  # 解析 base_url
-                base_url = parse_data(step_dict.pop("base_url"), step_dict["variables"], functions)
-
-                # 解析接口地址
-                # request_url = parse_data(
-                #     test_dict["request"]["url"],
-                #     test_dict["variables"],
-                #     functions,
-                #     raise_if_variable_not_found=False
-                # )
-
-                # 构建请求地址
-                # test_dict["request"]["url"] = utils.build_url(
-                #     base_url,
-                #     request_url
-                # )
+                base_url = await parse_data(step_dict.pop("base_url"), step_dict["variables"], functions)
                 url = step_dict["request"]["url"]
                 step_dict["request"]["url"] = base_url + url if not url.lower().startswith('http') else url
 
-            # 解析verify
-            if "request" in step_dict and "verify" not in step_dict["request"]:
-                step_dict["request"]["verify"] = config_verify
     else:  # UI 自动化
         # 用例中配置的浏览器信息
         browser_type, browser_path = case_config.get("browser_type", ''), case_config.get("browser_path", '')
@@ -647,26 +618,26 @@ def parse_test_step(steps: list, case_config: dict, project_mapping: dict):
 
             # 处理变量本身，有变量本身就有引用变量的情况
             for key in step["variables"]:
-                parsed_key = parse_data(key, step["variables"], functions, False)
-                parsed_value = parse_data(step["variables"][key], step["variables"], functions, False)
+                parsed_key = await parse_data(key, step["variables"], functions, False)
+                parsed_value = await parse_data(step["variables"][key], step["variables"], functions, False)
                 if parsed_key in step["variables"]:
                     step["variables"][parsed_key] = parsed_value
 
             # 测试步骤名字
-            step["name"] = parse_data(step.pop("name", ""), step["variables"], functions, False)
+            step["name"] = await parse_data(step.pop("name", ""), step["variables"], functions, False)
 
 
-def parse_test_case(testcase, project_mapping):
+async def parse_test_case(testcase, project_mapping):
     """ 解析测试用例和测试步骤
     Args:
         testcase: {"config": {}, "teststeps": []}
     """
     testcase.setdefault("config", {})
-    parse_test_config(testcase["config"], project_mapping)
-    parse_test_step(testcase["step_list"], testcase["config"], project_mapping)
+    await parse_test_config(testcase["config"], project_mapping)
+    await parse_test_step(testcase["step_list"], testcase["config"], project_mapping)
 
 
-async def parse_test_data(tests_dict):
+async def parse_test_data(tests_dict, report_case_id):
     """ 解析测试数据
 
     Args:
@@ -685,35 +656,48 @@ async def parse_test_data(tests_dict):
                 ]
             }
 
+        report_case_id: 测试报告用例的id
     """
-    project_mapping = tests_dict.get("project_mapping", {})
     parsed_tests_mapping = {
         "project": tests_dict.get("project", {}),
-        "project_mapping": project_mapping,
-        "report": tests_dict["report"],
-        "case_list": []
+        "project_mapping": tests_dict.get("project_mapping", {}),
+        "report_id": tests_dict["report_id"],
+        "report_model": tests_dict["report_model"],
+        "report_case_model": tests_dict["report_case_model"],
+        "report_step_model": tests_dict["report_step_model"],
+        "response_time_level": tests_dict["response_time_level"],
+        "test_case": []
     }
-    report_case = get_report_case_model(tests_dict["run_type"])
-    for testcase in tests_dict["case_list"]:
-        # 如果解析用例报错了，就记录并跳过这条用例
-        try:
-            parse_test_case(testcase, project_mapping)
-        except Exception as error:
-            report_case_data = await report_case.filter(id=testcase["config"]["report_case_id"]).first()
-            summary = json.loads(report_case_data.summary)
-            summary["success"] = 'error'
-            await report_case_data.test_is_error(summary=summary, error_msg=error)
-            continue
-        parsed_tests_mapping["case_list"].append(testcase)
 
+    report_case = await tests_dict["report_case_model"].filter(id=report_case_id).first()
+    report_case.case_data["report_case_id"] = report_case.id
+
+    test_case_mapping = {
+        "config": report_case.case_data,
+        "step_list": await tests_dict["report_step_model"].get_test_step_by_report_case(report_case.id)
+    }
+    test_case_mapping["config"]["pause_step_time_out"] = tests_dict["pause_step_time_out"]
+    try:
+        await parse_test_case(test_case_mapping, tests_dict.get("project_mapping", {}))
+    except Exception as error:
+        # exceptions.FunctionNotFound
+        summary = report_case.summary
+        summary["result"] = 'error'
+        await report_case.test_is_error(summary=summary, error_msg=traceback.format_exc())
+        return summary
+    parsed_tests_mapping["test_case_mapping"] = test_case_mapping
     return parsed_tests_mapping
 
-
-def get_report_case_model(run_type):
-    """ 获取报告的用例模型 """
-    if run_type == 'api':
-        return ApiReportCase
-    elif run_type == 'webUi':
-        return WebUiReportCase
-    else:
-        return AppUiReportCase
+    # for testcase in tests_dict["case_list"]:
+    #     # 如果解析用例报错了，就记录并跳过这条用例
+    #     try:
+    #         await parse_test_case(testcase, project_mapping)
+    #     except Exception as error:
+    #         report_case_data = await report_case.filter(id=testcase["config"]["report_case_id"]).first()
+    #         summary = json.loads(report_case_data.summary)
+    #         summary["success"] = 'error'
+    #         await report_case_data.test_is_error(summary=summary, error_msg=error)
+    #         continue
+    #     parsed_tests_mapping["case_list"].append(testcase)
+    #
+    # return parsed_tests_mapping

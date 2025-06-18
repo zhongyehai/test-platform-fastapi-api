@@ -38,8 +38,8 @@ def _check_file_path(paths):
 
 
 _check_file_path([
-    LOG_ADDRESS, SCRIPT_ADDRESS, DIFF_RESULT, CASE_FILE_ADDRESS, UI_CASE_FILE_ADDRESS, MOCK_DATA_ADDRESS,
-    CALL_BACK_ADDRESS, TEMP_FILE_ADDRESS, GIT_FILE_ADDRESS, DB_BACK_UP_ADDRESS, SWAGGER_FILE_ADDRESS,
+    LOG_ADDRESS, SCRIPT_ADDRESS, DIFF_RESULT, CASE_FILE_ADDRESS, UI_CASE_FILE_ADDRESS,
+    MOCK_DATA_ADDRESS, CALL_BACK_ADDRESS, TEMP_FILE_ADDRESS, GIT_FILE_ADDRESS, DB_BACK_UP_ADDRESS, SWAGGER_FILE_ADDRESS,
     BROWSER_DRIVER_ADDRESS, REPORT_IMG_UI_ADDRESS, REPORT_IMG_APP_ADDRESS
 ])
 
@@ -61,9 +61,11 @@ class FileUtil:
     @classmethod
     def save_file(cls, path, content):
         """ 保存文件 """
-        with io.open(path, "w", encoding="utf-8") as file:
+        with io.open(path, "w", encoding="utf-8", newline='\n') as file:
             if isinstance(content, str):
-                file.write(content)
+                if any(line.strip() for line in content.splitlines()):  # 检查非空内容
+                    file.write(content.rstrip() + '\n')  # 确保末尾有且只有一个换行，否则如果写入的是代码可能会有问题
+                # file.write(content)
             else:
                 json.dump(content, file, ensure_ascii=False, indent=4)
 

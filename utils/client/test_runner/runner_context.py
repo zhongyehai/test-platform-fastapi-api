@@ -22,11 +22,11 @@ class SessionContext(object):
         # 初始化时把当前测试用例运行结果标识为成功，后续步骤可根据此状态判断是否继续执行
         self.session_variables_mapping = utils.list_to_dict(variables or {"case_run_result": "success"})
         self.FUNCTIONS_MAPPING = functions
-        self.init_test_variables()
+        # await self.init_test_variables()
         self.validation_results = []
         self.update_to_header = {}
 
-    def init_test_variables(self, variables_mapping=None):
+    async def init_test_variables(self, variables_mapping=None):
         """ 初始化测试变量，在每个测试（api）开始时调用。变量映射将首先进行评估。
 
         Args:
@@ -48,7 +48,7 @@ class SessionContext(object):
         self.test_variables_mapping.update(self.session_variables_mapping)
 
         for variable_name, variable_value in variables_mapping.items():
-            variable_value = self.eval_content(variable_value)
+            variable_value = await self.eval_content(variable_value)
             self.update_test_variables(variable_name, variable_value)
 
     def update_test_variables(self, variable_name, variable_value):
@@ -74,15 +74,15 @@ class SessionContext(object):
         headers.update(self.update_to_header)
         return headers
 
-    def eval_content(self, content):
+    async def eval_content(self, content):
         """ 递归解析内容中的每个变量和函数。内容可以是任何数据结构，包括字典、列表、元组、数字、字符串等。"""
-        return parser.parse_data(
+        return await parser.parse_data(
             content,
             self.test_variables_mapping,
             self.FUNCTIONS_MAPPING
         )
 
-    def __eval_check_item(self, validator, resp_obj):
+    async def __eval_check_item(self, validator, resp_obj):
         """ evaluate check item in validator.
 
         Args:
@@ -113,7 +113,7 @@ class SessionContext(object):
             or parser.extract_variables(check_item) \
             or parser.extract_functions(check_item):
             # format 1/2/3
-            check_value = self.eval_content(check_item)
+            check_value = await self.eval_content(check_item)
         elif re.compile(r".*\(.*\).*").match(check_item) or check_item.startswith(("content", "headers", "cookies")):  # 正则表达式或提取表达式
             check_value = resp_obj.extract_field(check_item)
         else:
@@ -124,7 +124,7 @@ class SessionContext(object):
         # expect_value should only be in 2 types:
         # 1, variable reference, e.g. $expect_status_code
         # 2, actual value, e.g. 200
-        expect_value = self.eval_content(validator["expect"])
+        expect_value = await self.eval_content(validator["expect"])
         validator["expect"] = expect_value
         validator["check_result"] = "unchecked"
         return validator
@@ -206,7 +206,7 @@ class SessionContext(object):
             validator_dict["check_result"] = "fail"
             raise exceptions.ValidationFailure(error_msg)
 
-    def validate(self, validators, test_type, resp_obj=None, driver=None):
+    async def validate(self, validators, test_type, resp_obj=None, driver=None):
         """ 执行断言
         [{'_01equals': ['content', 'True']}]
         """
@@ -220,7 +220,7 @@ class SessionContext(object):
         for validator in validators:
             # evaluate validators with context variable mapping.
             if validator.get("check") is None:  # 数据校验，已经解析过了
-                evaluated_validator = self.__eval_check_item(parser.parse_validator(validator), resp_obj)
+                evaluated_validator = await self.__eval_check_item(parser.parse_validator(validator), resp_obj)
             else:
                 evaluated_validator = validator
             try:

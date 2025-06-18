@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-import copy
 import json
 
-from app.enums import DataStatusEnum
-from app.ui_test.model_factory import WebUiCaseSuite, WebUiStep, WebUiReportStep, WebUiReportCase
-from app.app_test.model_factory import AppUiCaseSuite, AppUiStep, AppUiReportStep, AppUiReportCase, AppUiRunPhone
-from app.assist.model_factory import Script
+from app.models.config.config import Config
+from app.schemas.enums import DataStatusEnum
+from app.models.autotest.model_factory import UiCaseSuite, UiStep, UiReportStep, UiReportCase, AppCaseSuite, AppStep, AppReportStep, AppReportCase, AppRunPhone
+from app.models.assist.model_factory import Script
 from utils.client.run_test_runner import RunTestRunner
 from utils.client.parse_model import StepModel, FormatModel
 from utils.client.test_runner.utils import build_url
@@ -15,52 +14,57 @@ from config import ui_action_mapping_reverse
 
 class RunCase(RunTestRunner):
     """ 运行测试用例 """
+    def __init__(self, report_id, case_id_list, env_code, env_name, temp_variables={}, task_dict={}, is_async=0,
+                 extend={}, browser=True, appium_config={}, run_type="ui", **kwargs):
 
-    def __init__(self, project_id=None, run_name=None, temp_variables=None, case_id_list=[], task_dict={}, report=None,
-                 is_async=True, browser=True, env_code="test", env_name=None, trigger_type="page", is_rollback=False,
-                 appium_config={}, run_type="web_ui", extend={}, **kwargs):
-
-        super().__init__(project_id=project_id, name=run_name, report=report, env_code=env_code,
-                         env_name=env_name, trigger_type=trigger_type, is_rollback=is_rollback, run_type=run_type,
-                         extend=extend, task_dict=task_dict)
+        super().__init__(report_id=report_id, env_code=env_code, env_name=env_name, run_type=run_type, extend=extend,
+                         task_dict=task_dict)
         self.temp_variables = temp_variables
         self.run_type = run_type
-        if run_type == "webUi":
-            self.suite_model = WebUiCaseSuite
-            self.step_model = WebUiStep
-            self.reportStepModel = WebUiReportStep
-            self.reportStepCase = WebUiReportCase
+        if run_type == "ui":
+            self.suite_model = UiCaseSuite
+            self.step_model = UiStep
+            self.report_step_model = UiReportStep
+            self.report_case_model = UiReportCase
             self.browser = browser
             self.device = self.device_id = self.run_server_id = self.run_phone_id = None
             self.device_dict = {}
-            self.report_img_folder = FileUtil.make_img_folder_by_report_id(report.id, 'ui')
+            self.report_img_folder = FileUtil.make_img_folder_by_report_id(report_id, 'ui')
         else:
-            self.suite_model = AppUiCaseSuite
-            self.step_model = AppUiStep
-            self.reportStepModel = AppUiReportStep
-            self.reportStepCase = AppUiReportCase
+            self.suite_model = AppCaseSuite
+            self.step_model = AppStep
+            self.report_step_model = AppReportStep
+            self.report_case_model = AppReportCase
             self.run_server_id = appium_config.pop("server_id")
             self.run_phone_id = appium_config.pop("phone_id")
             self.device = appium_config.pop("device")
             self.device_id = self.device["device_id"]
             self.device_dict = {}
-            self.report_img_folder = FileUtil.make_img_folder_by_report_id(report.id, 'app')
+            self.report_img_folder = FileUtil.make_img_folder_by_report_id(report_id, 'app')
 
-        self.DataTemplate["is_async"] = is_async
+        self.test_plan["is_async"] = is_async
         self.case_id_list = case_id_list  # 要执行的用例id_list
         self.appium_config = appium_config
         self.all_case_steps = []  # 所有测试步骤
 
     async def parse_and_run(self):
         """ 把解析放到异步线程里面 """
+        self.wait_time_out = await Config.get_wait_time_out()
+        if self.run_type == "ui":
+            self.front_report_addr = f'{await Config.get_report_host()}{await Config.get_web_ui_report_addr()}'
+        else:
+            self.front_report_addr = f'{await Config.get_report_host()}{await Config.get_app_ui_report_addr()}'
+
+        self.test_plan["pause_step_time_out"] = await Config.get_pause_step_time_out()
         await Script.create_script_file(self.env_code)  # 创建所有函数文件
-        if self.run_type != "webUi":
-            self.device_dict = {device.id: dict(device) for device in await AppUiRunPhone.all()}
+        if self.run_type != "ui":
+            self.device_dict = {device.id: dict(device) for device in await AppRunPhone.all()}
+        self.report = await self.report_model.filter(id=self.report_id).first()
         await self.parse_all_case()
         await self.report.parse_data_finish()
         await self.run_case()
 
-    async def parse_step(self, project, element, step):
+    async def parse_step(self, project, element, step, report_case_id):
         """ 解析测试步骤
         project: 当前步骤对应元素所在的项目(解析后的)
         element: 解析后的element
@@ -72,9 +76,7 @@ class RunCase(RunTestRunner):
             "name": step.name,
             "setup_hooks": step.up_func,
             "teardown_hooks": step.down_func,
-            "skip": not step.status,  # 无条件跳过当前测试
-            "skipIf": step.skip_if,  # 如果条件为真，则跳过当前测试
-            # "skipUnless": "",  # 除非条件为真，否则跳过当前测试
+            "skip_if": step.skip_if,  # 如果条件为真，则跳过当前测试
             "times": step.run_times,  # 运行次数
             "extract": step.extracts,  # 要提取的信息
             "validate": step.validates,  # 断言信息
@@ -82,7 +84,7 @@ class RunCase(RunTestRunner):
                 "execute_name": step.execute_name,
                 "action": step.execute_type,
                 "by_type": element.by,
-                "screen": None if self.run_type == 'webUi' else self.device_dict[element.template_device]["screen"],
+                "screen": None if self.run_type == 'ui' else self.device_dict[element.template_device]["screen"],
                 # 如果是打开页面，则设置为项目域名+页面地址
                 "element": build_url(project.host, element.element) if element.by == "url" else element.element,
                 "text": step.send_keys,
@@ -91,20 +93,15 @@ class RunCase(RunTestRunner):
             }
         }
 
-        report_step = await self.reportStepModel.create(
-            name=step_data["name"],
+        await self.report_step_model.create(
             element_id=element.id,
-            case_id=step.case_id,
             step_id=step.id,
-            step_data=step_data,
+            case_id=step.case_id,
             report_id=self.report.id,
-            report_case_id=step.report_case_id
+            report_case_id=step.report_case_id,
+            name=step_data["name"],
+            step_data=step_data
         )
-
-        step_data["report_step_id"] = report_step.id
-        step_data["test_action"]["report_step_id"] = report_step.id  # 方便存截图
-        step_data["report_step"] = report_step
-        return step_data
 
     async def parse_extracts(self, extracts: list):
         """ 解析数据提取
@@ -243,12 +240,15 @@ class RunCase(RunTestRunner):
                 case_name = f'{current_case.name}_{index + 1}' if current_case.run_times > 1 else current_case.name
 
                 # 记录解析下后的用例
-                report_case = await self.reportStepCase.create(
+                report_case_data = current_case.get_attr()
+                report_case_data["run_env"] = self.env_code
+                report_case = await self.report_case_model.create(
                     name=case_name,
                     case_id=current_case.id,
+                    suite_id=current_case.suite_id,
                     report_id=self.report.id,
                     case_data=current_case.get_attr(),
-                    summary=self.reportStepCase.get_summary_template()
+                    summary=self.report_case_model.get_summary_template()
                 )
 
                 # 满足跳过条件则跳过
@@ -259,26 +259,12 @@ class RunCase(RunTestRunner):
                 case_suite = await self.suite_model.filter(id=current_case.suite_id).first()
                 current_project = await self.get_format_project(case_suite.project_id)
 
-                # 用例格式模板
-                case_template = {
-                    "config": {
-                        "report_case_id": report_case.id,
-                        "report_case": report_case,
-                        "case_id": case_id,
-                        "project_id": current_project.id,
-                        "run_type": self.run_type,
-                        "variables": {},
-                        "name": case_name,
-                        "run_env": self.env_code
-                    },
-                    "step_list": []
-                }
-                if self.run_type == 'webUi':
+                if self.run_type == 'ui':
                     # 用例格式模板, # 火狐：geckodriver
-                    case_template["config"]["browser_type"] = self.browser
-                    case_template["config"]["browser_path"] = FileUtil.get_driver_path(self.browser)
+                    report_case_data["browser_type"] = self.browser
+                    report_case_data["browser_path"] = FileUtil.get_driver_path(self.browser)
                 else:
-                    case_template["config"]["appium_config"] = self.appium_config
+                    report_case_data["appium_config"] = self.appium_config
 
                 await self.get_all_steps(case_id)  # 递归获取测试步骤（中间有可能某些测试步骤是引用的用例）
 
@@ -306,10 +292,10 @@ class RunCase(RunTestRunner):
                             # 数据驱动的 comment 字段，用于做标识
                             step.name += driver_data.get("comment", "")
                             step.params = step.params = step.data_json = step.data_form = driver_data.get("data", {})
-                            case_template["step_list"].append(
-                                await self.parse_step(element_project, step_element, step))
+                            await self.parse_step(element_project, step_element, step, report_case.id)
+
                     else:
-                        case_template["step_list"].append(await self.parse_step(element_project, step_element, step))
+                        await self.parse_step(element_project, step_element, step, report_case.id)
 
                     # 把服务和用例的的自定义变量留下来
                     all_variables.update(element_project.variables)
@@ -320,12 +306,15 @@ class RunCase(RunTestRunner):
                 all_variables.update(current_case.variables)
                 all_variables.update({"device": self.device})  # 强制增加一个变量为设备id，用于去数据库查数据
                 all_variables.update({"device_id": self.device_id})  # 强制增加一个变量为设备id，用于去数据库查数据
-                case_template["config"]["variables"].update(all_variables)
+                report_case_data["variables"].update(all_variables)
+                report_case_data["run_type"] = self.run_type
+                await report_case.update_report_case_data(report_case_data)
 
-                self.DataTemplate["case_list"].append(copy.deepcopy(case_template))
+                self.test_plan["report_case_list"].append(report_case.id)
 
                 # 完整的解析完一条用例后，去除对应的解析信息
                 self.all_case_steps = []
 
         # 去除服务级的公共变量，保证用步骤上解析后的公共变量
-        self.DataTemplate["project_mapping"]["variables"] = {}
+        self.test_plan["project_mapping"]["variables"] = {}
+        self.init_parsed_data()

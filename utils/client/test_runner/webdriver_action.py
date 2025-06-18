@@ -4,9 +4,9 @@ import json
 import platform
 import time
 import os
+import subprocess
 from unittest.case import SkipTest
 
-# import psutil
 from appium import webdriver as appium_webdriver
 from appium.webdriver.common.touch_action import TouchAction
 from appium.webdriver.mobilecommand import MobileCommand
@@ -416,6 +416,11 @@ class Actions:
             self.find_element(locator, wait_time_out=wait_time_out)
         )
 
+    def action_10_02_js_click(self, locator: tuple, text: str = '', wait_time_out=None, *args, **kwargs):
+        """ 【JS】点击元素 """
+        element = self.find_element(locator, wait_time_out=wait_time_out)
+        self.driver.execute_script("arguments[0].click();", element)
+
     def action_10_03_add_cookie_by_dict_is_input(self, locator: tuple, cookie, *args, **kwargs):
         """ 【JS】以字典形式添加cookie """
         for key, value in get_dict_data(cookie).items():
@@ -453,9 +458,21 @@ class Actions:
         """ 【辅助】不操作元素 """
         return
 
-    def action_11_03_nothing_to_do(self, *args, **kwargs):
+    def action_11_03_reboot_app(self, *args, **kwargs):
         """ 【辅助】重启APP """
         self.driver.reset()
+
+    def action_11_03_01_close_app(self, *args, **kwargs):
+        """ 【辅助】将应用置于后台 """
+        self.driver.close_app()
+
+    def action_11_03_02_quit(self, *args, **kwargs):
+        """ 【辅助】关闭APP """
+        self.driver.quit()
+
+    def action_11_04_reboot_device(self, *args, **kwargs):
+        """ 【辅助】使用 adb 命令重启设备 """
+        subprocess.run(['adb', 'reboot'])
 
     #################################### 数据提取相关事件 ####################################
     def extract_08_title(self, *args, **kwargs):
@@ -655,10 +672,9 @@ class GetWebDriver(Actions):
     def chrome(self):
         """ chrome浏览器 """
         chrome_options = chromeOptions()
-        chrome_options.add_argument('--headless')
         chrome_options.add_argument('--no-sandbox')  # 关闭沙盒
-        # chrome_options.add_argument('--start-maximized')  # 浏览器启动后，窗口默认为最大化
-        chrome_options.add_argument('window-size=1920x1080')  # 浏览器启动后，调整窗口大小
+        chrome_options.add_argument('--window-size=1920x1080')  # 浏览器启动后，调整窗口大小
+        chrome_options.add_argument('--start-maximized')  # 浏览器启动后，窗口默认为最大化
         """
         --incognito ：进入隐身模式——保证浏览网页时，不留下任何痕迹。
         --user-data-dir=“绝对路径”：指定UserData路径，默认路径位于系统盘，通过该命令，可以重定向为其它分区
@@ -679,22 +695,22 @@ class GetWebDriver(Actions):
         --disable-popup-blocking ：关闭弹窗拦截
         --proxy-pac-url ： 指定使用PAC代理时，所需要的脚本url地址
         """
-        if platform.platform().startswith('Linux') is False:
-            chrome_options = None
+        if platform.platform().startswith('Linux'):
+            chrome_options.add_argument('--headless')
         return webdriver.Chrome(executable_path=self.browser_driver_path, chrome_options=chrome_options)
 
     def gecko(self):
         """ 火狐浏览器 """
         firefox_options = firefoxOptions()
 
-        # 置成0代表下载到浏览器默认下载路径，设置成2则可以保存到指定的目录
-        firefox_options.set_preference('browser.download.folderList', 2)
-        # 指定存放目录
-        firefox_options.set_preference('browser.download.dir', 'd:\\')
-        # 是否显示开始：True为显示开始，False为不显示开始
-        firefox_options.set_preference('browser.download.manager.showWhenStarting', False)
-        # 对所给文件类型不再弹出框进行询问
-        firefox_options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
+        # # 置成0代表下载到浏览器默认下载路径，设置成2则可以保存到指定的目录
+        # firefox_options.set_preference('browser.download.folderList', 2)
+        # # 指定存放目录
+        # firefox_options.set_preference('browser.download.dir', 'd:\\')
+        # # 是否显示开始：True为显示开始，False为不显示开始
+        # firefox_options.set_preference('browser.download.manager.showWhenStarting', False)
+        # # 对所给文件类型不再弹出框进行询问
+        # firefox_options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
 
         firefox_options.add_argument('--headless')
         firefox_options.add_argument('--no-sandbox')
@@ -725,11 +741,11 @@ class GetAppDriver(Actions):
             raise error
         super().__init__(self.appium_webdriver)
 
-    def __del__(self):
-        try:
-            self.appium_webdriver.close_app()
-        except:
-            pass
+    # def __del__(self):
+    #     try:
+    #         self.appium_webdriver.close_app()
+    #     except:
+    #         pass
 
 
 if __name__ == '__main__':

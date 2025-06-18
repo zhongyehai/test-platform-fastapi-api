@@ -7,10 +7,6 @@ from utils.client.test_runner.parser import extract_functions, parse_function, e
 
 class FormatModel(JsonUtil):
 
-    def parse_hook_func(self, hook_func_list):
-        """ 解析前后置hook """
-        return [func.strip() for func in hook_func_list if func]
-
     def parse_list_data(self, data_list):
         """ 解析头部参数、params参数
         headers_list:
@@ -30,10 +26,25 @@ class FormatModel(JsonUtil):
         :return
             {"auto_test_token": "eyJhbGciOiJIUzI1NiJ9", "rating_amount": "500000"}
         """
-        return {
-            v["key"]: self.build_data(v.get("data_type", "str"), v["value"])
-            for v in variables_list if v.get("key") and v.get("value") is not None
+        data = {
+            "data_driver_dict": {
+                "key": "",
+                "value": []
+            }
         }
+        for v in variables_list:
+            if v.get("key") is not None and v.get("value") is not None:
+                if v.get("data_type", "str") != "data_driver_list":
+                    data[v["key"]] = self.build_data(v.get("data_type", "str"), v["value"])
+                else: # 用例的数据驱动，单独存放，后续解析用例的时候使用
+                    data["data_driver_dict"]["key"] = v["key"]
+                    data["data_driver_dict"]["value"] = self.build_data(v.get("data_type", "str"), v["value"])
+        return data
+
+        # return {
+        #     v["key"]: self.build_data(v.get("data_type", "str"), v["value"])
+        #     for v in variables_list if v.get("key") is not None and v.get("value") is not None
+        # }
 
     def parse_extracts(self, extracts_list, is_api=True):
         """ 解析要提取的参数
@@ -82,7 +93,7 @@ class FormatModel(JsonUtil):
             extractor_list = []
             for extract in extracts_list:
                 extract_type = extract.get("extract_type")
-                if extract["status"] and extract.get("key") and extract_type:
+                if extract.get("status") and extract.get("key") and extract_type:
                     extract_type_lower = extract_type.lower()
                     if ("cookie" in extract_type_lower
                             or "session_storage" in extract_type_lower
@@ -141,8 +152,10 @@ class FormatModel(JsonUtil):
             return value
         elif data_type == "json":
             return self.dumps(self.loads(value))
-        elif data_type in ["True", "False"]:  # python数据类型
-            return eval(f'{data_type}')
+        elif data_type in ["None", "True", "False"]:
+            return eval(data_type)
+        elif data_type == "data_driver_list":
+            return eval(f'list({value})')
         else:  # python数据类型
             return eval(f'{data_type}({value})')
 
@@ -192,8 +205,8 @@ class FormatModel(JsonUtil):
 
         # 处理kwargs参数
         for kw_key, kw_value in kwargs.items():
-            # 如果是自定义变量则不改变, 如果不是，则把数据源加上
-            if extract_variables(kw_value).__len__() >= 1:
+            # 如果是自定义变量或者数据源是func则不改变, 如果不是，则把数据源加上
+            if extract_variables(kw_value).__len__() >= 1 or data_source == "func":
                 args_and_kwargs.append(f'{kw_key}={kw_value}')
             else:
                 args_and_kwargs.append(f'{kw_key}={data_source}.{kw_value}')
@@ -204,18 +217,20 @@ class FormatModel(JsonUtil):
         """ 判断 skip_if 是否要执行 """
         data_list = []
         for skip_if in skip_if_list:
-            if skip_if and skip_if.get("expect"):
+            if skip_if and skip_if.get("status") == 1 and skip_if.get("expect"):
                 if skip_if.get("data_source") not in ["run_env", "run_server", "run_device"]:  # 常规数据校验
                     skip_if["expect"] = self.build_data(skip_if["data_type"], skip_if["expect"])
+                skip_if["comparator_str"] = skip_if["comparator"]
                 skip_if["comparator"] = assert_mapping[skip_if["comparator"]]
                 data_list.append(skip_if)
 
-        if skip_on_fail == 1:  # 如果设置了失败则跳过，且优先校验
+        if skip_on_fail == 1:  # 如果设置了失败则跳过，则自动在步骤的跳过条件加上
             data_list.insert(0, {
                 'skip_type': 'or',
                 'data_source': 'variable',
                 'check_value': '$case_run_result',
                 'comparator': '_01equals',
+                'comparator_str': '相等',
                 'data_type': 'str',
                 'expect': 'fail'
             })
@@ -256,17 +271,12 @@ class ProjectModel(FormatModel):
 
     def __init__(self, **kwargs):
         self.id = kwargs.get("id")
-        self.name = kwargs.get("name")
-        self.manager = kwargs.get("manager")
         self.script_list = kwargs.get("script_list")
-        self.create_user = kwargs.get("create_user")
         self.host = kwargs.get("host")
         self.variables = self.parse_variables(kwargs.get("variables", {}))
-        # 接口自动化字段
-        self.headers = self.parse_list_data(kwargs.get("headers", {}))
-        # app自动化字段
-        self.app_package = kwargs.get("app_package")
-        self.app_activity = kwargs.get("app_activity")
+        self.headers = self.parse_list_data(kwargs.get("headers", {}))  # 接口自动化字段
+        self.app_package = kwargs.get("app_package")  # app自动化字段
+        self.app_activity = kwargs.get("app_activity")  # app自动化字段
 
 
 class ApiModel(FormatModel):
@@ -274,22 +284,14 @@ class ApiModel(FormatModel):
 
     def __init__(self, **kwargs):
         self.id = kwargs.get("id")
-        self.num = kwargs.get("num")
         self.name = kwargs.get("name")
         self.time_out = kwargs.get("time_out")
-        self.desc = kwargs.get("desc")
-        self.up_func = kwargs.get("up_func")
-        self.down_func = kwargs.get("down_func")
-        self.env = kwargs.get("env")
         self.method = kwargs.get("method")
-        self.addr = kwargs.get("addr")
-        self.headers = self.parse_list_data(kwargs.get("headers", {}))
         self.params = self.parse_list_data(kwargs.get("params", {}))
+        self.addr = kwargs.get("addr").split("?")[0] if self.params else kwargs.get("addr") # 同时有 params 和 queryString，以 params为准
+        self.headers = self.parse_list_data(kwargs.get("headers", {}))
         self.extracts = self.parse_extracts(kwargs.get("extracts", []))
         self.validates = self.parse_validates(kwargs.get("validates", {}))
-        self.module_id = kwargs.get("module_id")
-        self.project_id = kwargs.get("project_id")
-        self.create_user = kwargs.get("create_user")
 
         # 根据数据类型解析请求体
         self.body_type = kwargs.get("body_type", "json")
@@ -302,15 +304,11 @@ class ElementModel(FormatModel):
 
     def __init__(self, **kwargs):
         self.id = kwargs.get("id")
-        self.num = kwargs.get("num")
         self.name = kwargs.get("name")
-        self.desc = kwargs.get("desc")
         self.by = kwargs.get("by")
         self.element = kwargs.get("element")
         self.template_device = kwargs.get("template_device")
         self.wait_time_out = kwargs.get("wait_time_out")
-        self.page_id = kwargs.get("page_id")
-        self.module_id = kwargs.get("module_id")
         self.project_id = kwargs.get("project_id")
 
 
@@ -319,35 +317,22 @@ class CaseModel(FormatModel):
 
     def __init__(self, **kwargs):
         self.id = kwargs.get("id")
-        self.num = kwargs.get("num")
         self.name = kwargs.get("name")
-        self.desc = kwargs.get("desc")
-        self.env = kwargs.get("env")
-        self.script_list = kwargs.get("script_list")
         self.variables = self.parse_variables(kwargs.get("variables", {}))
         self.skip_if = self.parse_skip_if(kwargs.get("skip_if"))
         self.run_times = kwargs.get("run_times")
-        self.module_id = kwargs.get("module_id")
         self.suite_id = kwargs.get("suite_id")
-        self.create_user = kwargs.get("create_user")
-        # 接口自动化字段
-        self.headers = self.parse_list_data(kwargs.get("headers", {}))
+        self.headers = self.parse_list_data(kwargs.get("headers", {}))  # 接口自动化字段
 
     def get_attr(self):
         return {
             "id": self.id,
-            "num": self.num,
             "name": self.name,
-            "desc": self.desc,
-            "env": self.env,
-            "script_list": self.script_list,
             "variables": self.variables,
             "skip_if": self.skip_if,
             "run_times": self.run_times,
-            "module_id": self.module_id,
-            "suite_id": self.suite_id,
-            "create_user": self.create_user,
-            "headers": self.headers
+            "headers": self.headers,
+            "suite_id": self.suite_id
         }
 
 
@@ -356,21 +341,19 @@ class StepModel(FormatModel):
 
     def __init__(self, **kwargs):
         self.id = kwargs.get("id")
-        self.num = kwargs.get("num")
         self.name = kwargs.get("name")
         self.run_times = kwargs.get("run_times")
-        self.up_func = kwargs.get("up_func")
-        self.down_func = kwargs.get("down_func")
+        self.up_func = kwargs.get("up_func", [])
+        self.down_func = kwargs.get("down_func", [])
         self.skip_if = self.parse_skip_if(kwargs.get("skip_if"), kwargs.get("skip_on_fail", 1))
-        self.status = kwargs.get("status")
         self.data_driver = kwargs.get("data_driver", {})
         self.quote_case = kwargs.get("quote_case", {})
         self.case_id = kwargs.get("case_id")
         self.project_id = kwargs.get("project_id")
-        self.create_user = kwargs.get("create_user")
 
         # 接口自动化
         self.time_out = kwargs.get("time_out")
+        self.allow_redirect = kwargs.get("allow_redirect")
         self.replace_host = kwargs.get("replace_host")
         self.headers = self.parse_list_data(kwargs.get("headers", {}))
         self.params = self.parse_list_data(kwargs.get("params", {}))

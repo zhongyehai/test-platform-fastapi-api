@@ -5,11 +5,10 @@ import traceback
 from pydantic import ValidationError
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
-
-from app.system.model_factory import SystemErrorRecord
-from utils.message.send_report import send_system_error
-from utils.view import restful
 from tortoise import exceptions as tortoise_exceptions
+
+from app.models.system.model_factory import SystemErrorRecord
+from utils.message.send_report import send_system_error
 
 
 def register_exception_handler(app):
@@ -76,7 +75,7 @@ def register_exception_handler(app):
     @app.exception_handler(Exception)
     async def unexpected_exception(request: Request, exc: Exception):
         """ 未预期的所有异常捕获、pydantic数据值校验不通过 """
-        if isinstance(exc, ValueError): return restful.fail(str(exc))  # 数据值校验不通过
+        if isinstance(exc, ValueError): return request.app.fail(str(exc))  # 数据值校验不通过
 
         error = traceback.format_exc()
         try:
@@ -89,13 +88,13 @@ def register_exception_handler(app):
                 headers=dict(request.headers),
                 params=dict(request.query_params) or {},
                 data_form={},
-                data_json={} if request.url.path.endswith("upload") else request.state.set_body,
+                data_json=request.state.set_body if request.state.is_upload_file else {},
                 detail=error
             )
 
             # 发送即时通讯通知
             if platform.platform().startswith('Linux'):
-                send_system_error(
+                await send_system_error(
                     title=f'{request.app.conf.token_secret_key}报错通知，数据id：{error_record.id}', content=error)
         except Exception as error:
             request.app.logger.error(traceback.format_exc())
@@ -104,6 +103,7 @@ def register_exception_handler(app):
 def get_error_msg(exc):
     # error_msg = exc.errors()
     error = exc.errors()[0]
+    print(error)
     filed_name = error["loc"][-1]
     error_type, msg = error["type"], error["msg"]
 

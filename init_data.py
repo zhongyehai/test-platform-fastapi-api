@@ -4,11 +4,11 @@ import os
 
 from tortoise import Tortoise, run_async
 
-from app.enums import DataStatusEnum
-from config import tortoise_orm_conf, hash_secret_key
-from app.system.model_factory import Permission, Role, RolePermissions, User, UserRoles
-from app.config.model_factory import BusinessLine, ConfigType, Config, RunEnv
-from app.assist.model_factory import Script
+from app.schemas.enums import DataStatusEnum
+from config import tortoise_orm_conf, password_secret_key
+from app.models.system.model_factory import Permission, Role, RolePermissions, User, UserRoles
+from app.models.config.model_factory import BusinessLine, ConfigType, Config, RunEnv
+from app.models.assist.model_factory import Script
 
 
 def print_start_delimiter(content):
@@ -123,11 +123,46 @@ device_extends = {
     "app_installed_record_count": "APP安装数量"
 }
 
+# 2025 年的节假日，每年需手动更新
+holiday_list = [
+    "01-01",
+    "01-28", "01-29", "01-30", "01-31", "02-01", "02-02", "02-03", "02-04",
+    "04-04", "04-05", "04-06",
+    "05-01", "05-02", "05-03", "05-04", "05-05",
+    "05-31", "06-01", "06-02",
+    "10-01", "10-02", "10-03", "10-04", "10-05", "10-06", "10-07", "10-08"
+]
+
+# 接口自动化测试内置断言，用于添加相似断言方式时，快速选择
+api_default_validator = [
+    {
+        "label": "code=0",
+        "value": {"key": "code", "value": "0", "status": 1, "data_type": "int", "data_source": "content", "validate_type": "data", "validate_method": "相等"}
+    },
+    {
+        "label": "data长度大于0",
+        "value": {"key": "data", "value": "0", "status": 1, "data_type": "int", "data_source": "content", "validate_type": "data", "validate_method": "长度大于"}
+    }
+]
+
+# 测试步骤响应时间级别的映射，毫秒
+response_time_level = {"slow": 300, "very_slow": 1000}
+
 # 回调流水线消息内容
 call_back_msg_addr = ""
 
-# 保存脚本时，不校验格式的函数名字
-name_list = ["contextmanager"]
+# 暂停测试步骤执行的超时时间
+pause_step_time_out = 10 * 60 # 10分钟
+
+# shell 造数据的，服务器信息
+shell_command_info = {
+    "ip": "",
+    "port": 22,
+    "username": "",
+    "password": "",
+    "file_path": "",
+    "log_path": ""
+}
 
 with open('rules.json', 'r', encoding='utf8') as rules:
     permission_dict = json.load(rules)
@@ -222,7 +257,7 @@ async def init_user():
     business = await BusinessLine.filter(code=business_dict["code"]).first()
     if not business:
         run_env_id = await RunEnv.filter().all().values('id')
-        business_dict["env_list"] = run_env_id
+        business_dict["env_list"] = [data["id"] for data in run_env_id]
         business = await BusinessLine.model_create(business_dict)
         print_item_delimiter(f'业务线【{business.name}】创建成功')
     print_type_delimiter("业务线创建完成")
@@ -230,14 +265,14 @@ async def init_user():
     # 创建用户
     print_type_delimiter("开始创建用户")
     user_list = [
-        {"account": "admin", "password": "123456", "name": "管理员", "role": ["管理员-后端", "管理员-前端"]},
+        {"account": "admin1", "password": "123456", "name": "管理员1", "role": ["管理员-后端", "管理员-前端"]},
         {"account": "manager", "password": "manager", "name": "业务线负责人", "role": ["业务线负责人"]},
         {"account": "common", "password": "common", "name": "测试员", "role": ["开发/测试人员"]}
     ]
     for user_info in user_list:
         if not await User.filter(account=user_info["account"]).first():
             user_info["status"] = DataStatusEnum.ENABLE
-            user_info["password"] = User.password_to_hash(user_info["password"], hash_secret_key)
+            user_info["password"] = User.password_to_hash(user_info["password"], password_secret_key)
             user_info["business_list"] = [business.id]
             user = await User.model_create(user_info)
             for role_name in user_info["role"]:
@@ -255,8 +290,8 @@ async def init_config_type():
         {"name": "系统配置", "desc": "全局配置"},
         {"name": "邮箱", "desc": "邮箱服务器"},
         {"name": "接口自动化", "desc": "接口自动化测试"},
-        {"name": "ui自动化", "desc": "webUi自动化测试"},
-        {"name": "app自动化", "desc": "appUi自动化测试"}
+        {"name": "ui自动化", "desc": "ui自动化测试"},
+        {"name": "app自动化", "desc": "app自动化测试"}
     ]
     for data in config_type_list:
         if not await ConfigType.filter(name=data["name"]).first():
@@ -279,22 +314,22 @@ async def init_config():
 
         "系统配置": [
             {"name": "platform_name", "value": "极测平台", "desc": "测试平台名字"},
-            {"name": "yapi_host", "value": "", "desc": "yapi域名"},
-            {"name": "yapi_account", "value": "", "desc": "yapi账号"},
-            {"name": "yapi_password", "value": "", "desc": "yapi密码"},
-            {"name": "ignore_keyword_for_group", "value": "[]", "desc": "不需要从yapi同步的分组关键字"},
-            {"name": "ignore_keyword_for_project", "value": "[]", "desc": "不需要从yapi同步的服务关键字"},
             {"name": "kym", "value": json.dumps(kym_keyword, ensure_ascii=False), "desc": "KYM分析项"},
             {"name": "sync_mock_data", "value": {}, "desc": "同步回调数据源"},
             {"name": "async_mock_data", "value": {}, "desc": "异步回调数据源"},
-            {"name": "holiday_list", "value": json.dumps(
-                ["01-01", "04-05", "05-01", "10-01"], ensure_ascii=False), "desc": "节假日/调休日期，需每年手动更新"},
+            {"name": "holiday_list", "value": json.dumps(holiday_list, ensure_ascii=False), "desc": "节假日/调休日期，需每年手动更新"},
             {"name": "default_diff_message_send_addr", "value": "", "desc": "yapi接口监控报告默认发送钉钉机器人地址"},
             {"name": "run_time_out", "value": "600", "desc": "前端运行测试时，等待的超时时间，秒"},
             {"name": "report_host", "value": "http://localhost", "desc": "查看报告域名"},
             {"name": "callback_webhook", "value": "", "desc": "接口收到回调请求后即时通讯通知的地址"},
             {"name": "call_back_msg_addr", "value": call_back_msg_addr, "desc": "发送回调流水线消息内容地址"},
+
+            {"name": "default_account", "value": json.dumps({"account": "admin", "password": "123456"}),
+             "desc": "默认登录账号"},
             {"name": "save_func_permissions", "value": "0", "desc": "保存脚本权限，0所有人都可以，1管理员才可以"},
+            {"name": "pause_step_time_out", "value": pause_step_time_out, "desc": "暂停测试步骤执行的超时时间"},
+            {"name": "shell_command_info", "value": json.dumps(shell_command_info), "desc": "shell 造数据的，服务器信息"},
+            {"name": "pip_command", "value": "pip", "desc": "执行 'pip install' 时指定的pip，或者pip的绝对路径，用于在线管理第三方库"},
             {
                 "name": "call_back_response",
                 "value": "",
@@ -302,7 +337,7 @@ async def init_config():
             },
             {
                 "name": "func_error_addr",
-                "value": "/#/assist/errorRecord",
+                "value": "/#/assist/error-record",
                 "desc": "展示自定义函数错误记录的前端地址（用于即时通讯通知）"
             }
         ],
@@ -310,23 +345,20 @@ async def init_config():
         "接口自动化": [
             {"name": "run_time_error_message_send_addr", "value": "", "desc": "运行测试用例时，有错误信息实时通知地址"},
             {"name": "request_time_out", "value": 60, "desc": "运行测试步骤时，request超时时间"},
+            {"name": "response_time_level", "value": json.dumps(response_time_level), "desc": "测试步骤响应时间级别的映射，毫秒"},
             {
                 "name": "api_report_addr",
-                "value": "/#/apiTest/reportShow?id=",
+                "value": "/#/api-test/report-show?id=",
                 "desc": "展示测试报告页面的前端地址（用于即时通讯通知）"
             },
-            {
-                "name": "diff_api_addr",
-                "value": "/#/assist/diffRecordShow?id=",
-                "desc": "展示yapi监控报告页面的前端地址（用于即时通讯通知）"
-            }
+            {"name": "api_default_validator", "value": json.dumps(api_default_validator), "desc": "接口自动化测试内置断言，用于添加相似断言方式时，快速选择"}
         ],
 
         "ui自动化": [
             {"name": "wait_time_out", "value": 10, "desc": "等待元素出现时间"},
             {
                 "name": "web_ui_report_addr",
-                "value": "/#/webUiTest/reportShow?id=",
+                "value": "/#/ui-test/report-show?id=",
                 "desc": "展示测试报告页面的前端地址（用于即时通讯通知）"
             }
         ],
@@ -341,7 +373,7 @@ async def init_config():
             },
             {
                 "name": "app_ui_report_addr",
-                "value": "/#/appUiTest/reportShow?id=",
+                "value": "/#/app-test/report-show?id=",
                 "desc": "展示测试报告页面的前端地址（用于即时通讯通知）"
             }
         ]
@@ -394,13 +426,13 @@ async def init_run_env():
 async def init_data():
     await Tortoise.init(tortoise_orm_conf, timezone="Asia/Shanghai")
     print_start_delimiter("开始初始化数据")
+    await init_run_env()
     await init_permission()
     await init_role()
     await init_user()
     await init_config_type()
     await init_config()
     await init_script()
-    await init_run_env()
     print_start_delimiter("数据初始化完毕")
 
 

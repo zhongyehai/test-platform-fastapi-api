@@ -13,7 +13,7 @@ class SendEmail:
         self.username = username
         self.password = password
         self.to_list = to_list
-        self.result = msg_content["result"]
+        self.status = msg_content["status"]
         self.content = msg_content["msg"]
 
     def send_email(self):
@@ -21,7 +21,7 @@ class SendEmail:
         message = MIMEMultipart()  # 邮件对象
 
         # 邮件title
-        email_title = f'接口自动化测试报告邮件，执行结果为：{"成功" if self.result == "success" else "失败"}'
+        email_title = f'自动化测试：{"通过" if self.status == "success" else "不通过"}'
         message["Subject"] = Header(email_title, "utf-8").encode()
 
         # 邮件正文
@@ -41,3 +41,6 @@ class SendEmail:
             service.close()
         except Exception as error:
             print(f'发送邮件出错，错误信息为：\n {error}')
+
+if __name__ == '__main__':
+    pass

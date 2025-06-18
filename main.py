@@ -1,7 +1,7 @@
 from fastapi.staticfiles import StaticFiles
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 
-from app.baseView import FastAPI
+from app.routers.base_view import FastAPI
 from app.hooks.error_hook import register_exception_handler
 from app.hooks.request_hook import register_request_hook
 from app.hooks.app_hook import register_app_hook
@@ -46,5 +46,9 @@ async def get_redoc():
 
 if __name__ == '__main__':
     import uvicorn
+    import multiprocessing
+    workers = 1
+    # workers = multiprocessing.cpu_count() * 2 + 1  # 动态设置Worker数量
+    print(f"启动 workers 数量：{workers}")
 
-    uvicorn.run('main:app', host="0.0.0.0", port=main_server_port, workers=2)
+    uvicorn.run('main:app', host="0.0.0.0", port=main_server_port, workers=workers)

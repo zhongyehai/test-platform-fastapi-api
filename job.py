@@ -4,9 +4,9 @@ from tortoise import Tortoise
 from app.hooks.error_hook import register_exception_handler
 from app.hooks.request_hook import register_request_hook
 from app.hooks.app_hook import register_app_hook
-from app.system.forms.job import GetJobForm
-from app.baseView import FastAPI
-from app.system.models.job import ApschedulerJobs
+from app.schemas.system.job import GetJobForm
+from app.routers.base_view import FastAPI
+from app.models.system.job import ApschedulerJobs
 from config import job_server_port, tortoise_orm_conf
 from utils.util.request import request_run_task_api
 from utils.util.apscheduler import AsyncIOScheduler

@@ -2,6 +2,13 @@
 from requests.exceptions import ReadTimeout
 from selenium.common.exceptions import WebDriverException, TimeoutException, InvalidElementStateException
 from utils.client.test_runner.compat import JSONDecodeError
+from .compat import json
+
+try:
+    JSONDecodeError = json.JSONDecodeError
+except AttributeError:
+    JSONDecodeError = ValueError
+
 
 # ====================== 失败类型的异常，触发这些异常时，将会把测试结果标记为失败 ======================
 class MyBaseFailure(Exception):
@@ -69,6 +76,13 @@ class UITestRunnerTimeoutException(MyBaseError, TimeoutException):
 
 class RunTimeException(MyBaseError):
     """ 抛出运行时异常 """
+
+    def __init__(self, msg):
+        MyBaseError.__init__(self, msg)
+
+
+class StopTest(MyBaseError):
+    """ 停止测试执行 """
 
     def __init__(self, msg):
         MyBaseError.__init__(self, msg)
