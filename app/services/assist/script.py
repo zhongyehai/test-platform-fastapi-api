@@ -64,6 +64,7 @@ async def debug_script(request: Request, form: schema.DebugScriptForm):
     except Exception as e:
         sys.stdout = sys.__stdout__  # 恢复输出到console
         error_data = "\n".join("{}".format(traceback.format_exc()).split("↵"))
+        request.app.logger.error(error_data)
         return request.app.fail(msg="语法错误，请检查", result={
             "env": form.env,
             "expression": form.expression,

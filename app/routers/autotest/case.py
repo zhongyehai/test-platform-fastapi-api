@@ -9,7 +9,7 @@ case_router = APIRouter()
 case_router.add_get_route(
     "/list", case_service.get_case_list, response_model=List[CasePydantic], summary="获取用例列表")
 case_router.add_put_route("/sort", case_service.change_case_sort, summary="用例排序")
-case_router.add_get_route("/make-data-list", case_service.get_case_list, summary="获取造数用例集的用例list")
+case_router.add_get_route("/make-data-list", case_service.get_make_data_case_list, summary="获取造数用例集的用例list")
 case_router.add_get_route("/name", case_service.get_case_name, summary="根据用例id获取用例名")
 case_router.add_get_route("/project", case_service.get_case_project, summary="获取用例属于哪个用例集、哪个用例")
 case_router.add_put_route("/status", case_service.change_case_status, summary="修改用例状态（是否执行）")

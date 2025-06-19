@@ -39,7 +39,7 @@ async def change_case_sort(request: Request, form: schema.ChangeSortForm):
     return request.app.put_success()
 
 
-async def get_assist_case_list(request: Request, form: schema.GetAssistCaseForm = Depends()):
+async def get_make_data_case_list(request: Request, form: schema.GetAssistCaseForm = Depends()):
     case_model, suite_model = ApiCase, ApiCaseSuite
     if request.app.test_type == "app":
         case_model, suite_model = AppCase, AppCaseSuite

@@ -65,9 +65,8 @@ class Script(BaseModel):
     @classmethod
     async def run_func(cls, func, args, kwargs, timeout=600):
         """ 执行自定义函数，设置等待超时时间为600秒，如果过了超时时间函数还是没执行完，会造成线程卡住，后面的任务不执行 """
-        # executor = ThreadPoolExecutor(max_workers=20)
         executor = ThreadPoolExecutor(max_workers=min(50, os.cpu_count() * 5))
-        loop = asyncio.get_running_loop()
+        # loop = asyncio.get_running_loop()
         if not kwargs: # 只有位置参数，使用默认线程池
             # 第一个参数：None 表示使用默认线程池 [1,7](@ref)
             # 第二个参数：目标函数

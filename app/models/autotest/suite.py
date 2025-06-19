@@ -135,11 +135,12 @@ class BaseCaseSuite(BaseModel):
     @classmethod
     async def get_make_data_case(cls, project_id, case_model):
         """ 获取造数据用例集下的用例 """
-        suite_list = await cls.filter(project_id=project_id, suite_type=ApiCaseSuiteTypeEnum.MAKE_DATA).all().values(
-            "id")
+        filed_list = ["id", "name", "desc", "status", "skip_if", "headers", "variables", "output", "suite_id"]
+        suite_list = await cls.filter(
+            project_id=project_id, suite_type=ApiCaseSuiteTypeEnum.MAKE_DATA).all().values("id")
         suite_id_list = [suite["id"] for suite in suite_list]
         return await case_model.filter(
-            suite_id__in=suite_id_list, status=CaseStatusEnum.DEBUG_PASS_AND_RUN).order_by("num").all()
+            suite_id__in=suite_id_list, status=CaseStatusEnum.DEBUG_PASS_AND_RUN).order_by("num").all().values(*filed_list)
 
 
 class ApiCaseSuite(BaseCaseSuite):
