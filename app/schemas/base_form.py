@@ -171,18 +171,11 @@ class BaseForm(pydanticBaseModel, JsonUtil):
             title = f"{msg_title}设置，第【{index + 1}】行"
             key, value, data_type = data.get("key"), data.get("value"), data.get("data_type")
 
-            # 校验格式
-            # 要设置变量，则key、数据类型、备注必传
-            if key or data_type:
-                if msg_title == 'form-data':
-                    if not key or not data_type:
-                        raise ValueError(f"{title}，要设置{msg_title}，则【key、数据类型、备注】都需设置")
-                else:
-                    if not key or not data_type or not data.get("remark"):
-                        raise ValueError(f"{title}，要设置{msg_title}，则【key、数据类型、备注】都需设置")
-
             # 检验数据类型
             if key:
+                if not data_type or not value or not data.get("remark"):
+                    raise ValueError(f"{title}，要设置{msg_title}，则【key、数据类型、备注】都需设置")
+
                 if self.validate_data_format(value, data_type) is False:
                     raise ValueError(f"{title}，{msg_title}值与数据类型不匹配")
 
@@ -193,6 +186,8 @@ class BaseForm(pydanticBaseModel, JsonUtil):
                 pass
             elif data_type == "json":
                 self.dumps(self.loads(value))
+            elif data_type == "data_driver_list":
+                list(value)
             else:  # python数据类型
                 eval(f"{data_type}({value})")
         except Exception as error:

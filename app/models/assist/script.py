@@ -5,6 +5,7 @@ import os
 import types
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial  # 处理关键字参数必备
+from typing import Callable, Any
 
 from ..base_model import fields, pydantic_model_creator, BaseModel
 from app.models.config.run_env import RunEnv
@@ -63,26 +64,44 @@ class Script(BaseModel):
         return func_dict
 
     @classmethod
-    async def run_func(cls, func, args, kwargs, timeout=600):
-        """ 执行自定义函数，设置等待超时时间为600秒，如果过了超时时间函数还是没执行完，会造成线程卡住，后面的任务不执行 """
-        executor = ThreadPoolExecutor(max_workers=min(50, os.cpu_count() * 5))
-        # loop = asyncio.get_running_loop()
-        if not kwargs: # 只有位置参数，使用默认线程池
-            # 第一个参数：None 表示使用默认线程池 [1,7](@ref)
-            # 第二个参数：目标函数
-            # 第三个参数：位置参数列表
-            # result = await loop.run_in_executor(None, func,*args)
-            result = await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(None, func,*args), timeout=timeout)
-        else: # 支持关键字参数（通过 partial 包装）
-            # 用 partial 绑定参数，解决 run_in_executor 不支持 kwargs 的问题
-            # 第一个参数：使用自定义线程池
-            # 第二个参数：包装后的无参函数
-            # 第三个参数：不填，否则执行的时候会报错
-            bound_func = partial(func, *args, **kwargs)
-            # result = await loop.run_in_executor(executor, bound_func)
-            result = await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(executor, bound_func), timeout=timeout)
-        return result
+    async def run_func(cls, func: Callable, args: tuple = None, kwargs: dict = None, timeout: int = 600) -> Any:
+        """线程安全的异步任务执行器，支持超时控制和自动资源回收"""
+        args = args or ()
+        kwargs = kwargs or {}
+        max_workers = min(50, os.cpu_count() * 5)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            try:
+                if not kwargs:
+                    return await asyncio.wait_for(
+                        asyncio.get_running_loop().run_in_executor(executor, func, *args), timeout=timeout)
+                bound_func = partial(func, *args, **kwargs)
+                return await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(executor, bound_func), timeout=timeout)
+            except Exception as e:
+                executor.shutdown(wait=True)  # 强制终止超时任务
+                raise
+
+    # @classmethod
+    # async def run_func(cls, func, args, kwargs, timeout=600):
+    #     """ 执行自定义函数，设置等待超时时间为600秒，如果过了超时时间函数还是没执行完，会造成线程卡住，后面的任务不执行 """
+    #     executor = ThreadPoolExecutor(max_workers=min(50, os.cpu_count() * 5))
+    #     # loop = asyncio.get_running_loop()
+    #     if not kwargs: # 只有位置参数，使用默认线程池
+    #         # 第一个参数：None 表示使用默认线程池 [1,7](@ref)
+    #         # 第二个参数：目标函数
+    #         # 第三个参数：位置参数列表
+    #         # result = await loop.run_in_executor(None, func,*args)
+    #         result = await asyncio.wait_for(
+    #             asyncio.get_running_loop().run_in_executor(None, func,*args), timeout=timeout)
+    #     else: # 支持关键字参数（通过 partial 包装）
+    #         # 用 partial 绑定参数，解决 run_in_executor 不支持 kwargs 的问题
+    #         # 第一个参数：使用自定义线程池
+    #         # 第二个参数：包装后的无参函数
+    #         # 第三个参数：不填，否则执行的时候会报错
+    #         bound_func = partial(func, *args, **kwargs)
+    #         # result = await loop.run_in_executor(executor, bound_func)
+    #         result = await asyncio.wait_for(
+    #             asyncio.get_running_loop().run_in_executor(executor, bound_func), timeout=timeout)
+    #     return result
 
 ScriptPydantic = pydantic_model_creator(Script, name="Script")

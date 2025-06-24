@@ -38,5 +38,16 @@ class DataPool(BaseModel):
         table_description = "测试数据池"
 
 
+class WebSocketMessage(BaseModel):
+    command = fields.CharField(16, null=True, default="", description="消息command")
+    message_id = fields.CharField(64, null=True, index=True, default="", description="message-id")
+    destination = fields.CharField(64, null=True, index=True, default="", description="destination")
+    headers = fields.TextField(null=True, default="", description="headers")
+    message_body = fields.TextField(null=True, default="", description="消息内容")
+
+    class Meta:
+        table = "auto_test_websocket"
+        table_description = "WebSocket消息监控"
+
 AutoTestUserPydantic = pydantic_model_creator(AutoTestUser, name="AutoTestUser")
 DataPoolPydantic = pydantic_model_creator(DataPool, name="DataPool")

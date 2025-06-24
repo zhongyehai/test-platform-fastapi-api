@@ -36,14 +36,14 @@ class GetDataPoolForm(BaseForm):
 
 class PostDataPoolForm(BaseForm):
     """ 新增数据池数据 """
-    env: str = Field(..., title="环境")
-    desc: str = Field(title="描述文字")
-    mobile: str = Field(title="手机号")
-    password: str = Field(title="密码")
-    business_order_no: str = Field(title="流水号")
+    env: Optional[str] = Field(..., title="环境")
+    desc: Optional[str] = Field(None, title="描述文字")
+    mobile: Optional[str] = Field(None, title="手机号")
+    password: Optional[str] = Field(None, title="密码")
+    business_order_no: Optional[str] = Field(None, title="流水号")
     amount: Optional[str] = Field(None, title="金额")
-    business_status: str = Field(..., title="业务状态")
-    use_status: str = Field(..., title="使用状态")
+    business_status: Optional[str] = Field(None, title="业务状态")
+    use_status: Optional[str] = Field('not_used', title="使用状态")
 
 
 class PutDataPoolForm(GetDataPoolForm, PostDataPoolForm):

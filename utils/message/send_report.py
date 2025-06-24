@@ -108,10 +108,10 @@ async def call_back_for_pipeline(task_id, call_back_info: list, extend: dict, st
     logger.info("回调执行结束")
 
 
-async def send_run_time_error_message(content):
-    """ 执行自定义函数时发生了异常的报告 """
-    msg = run_time_error_msg(content, await Config.get_report_host(), await Config.get_func_error_addr())
-    await send_msg(WebHook.build_webhook_addr(_default_web_hook_type, _default_web_hook, _web_hook_secret), msg)
+# async def send_run_time_error_message(content):
+#     """ 执行自定义函数时发生了异常的报告 """
+#     msg = run_time_error_msg(content, await Config.get_report_host(), await Config.get_func_error_addr())
+#     await send_msg(WebHook.build_webhook_addr(_default_web_hook_type, _default_web_hook, _web_hook_secret), msg)
 
 
 # async def send_run_func_error_message(content):
