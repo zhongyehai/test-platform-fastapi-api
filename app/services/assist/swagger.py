@@ -5,7 +5,7 @@ import requests
 from fastapi import Request, Depends
 
 from ...models.assist.model_factory import SwaggerPullLog
-from ...models.autotest.model_factory import ApiModule, ApiMsg
+from ...models.autotest.model_factory import ApiProject, ApiModule, ApiMsg
 from utils.util.file_util import SWAGGER_FILE_ADDRESS, FileUtil
 from app.schemas.enums import DataStatusEnum
 from ...schemas.assist import swagger as schema
@@ -342,7 +342,8 @@ async def get_pull_swagger_log(request: Request, form: schema.GetPullLogForm = D
 async def pull_swagger(request: Request, form: schema.SwaggerPullForm):
     """ 根据指定服务的swagger拉取所有数据 """
     # options: ['controller_name', 'api_name', 'headers', 'query', 'json', 'form', 'response']
-    project, options, module_dict = await form.validate_request(), form.options, {}
+    options, module_dict = form.options, {}
+    project = await ApiProject.validate_is_exist("服务不存在", id=form.project_id)
     pull_log = await SwaggerPullLog.model_create({"project_id": project.id, "pull_args": options}, request.state.user)
     swagger_data = {}
     try:

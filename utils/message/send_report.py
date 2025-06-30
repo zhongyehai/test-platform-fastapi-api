@@ -2,6 +2,8 @@
 from datetime import datetime
 from threading import Thread
 
+import httpx
+
 from app.models.config.model_factory import Config, WebHook
 from app.models.assist.model_factory import CallBack
 from app.schemas.enums import SendReportTypeEnum, ReceiveTypeEnum
@@ -10,14 +12,15 @@ from .template import run_time_error_msg, call_back_webhook_msg, render_html_rep
     get_business_stage_count_msg, inspection_ding_ding, inspection_we_chat
 from ..logs.log import logger
 from config import _default_web_hook_type, _default_web_hook, _web_hook_secret
-from utils.util import request as async_request
+
 
 async def send_msg(addr, msg):
     """ 发送消息 """
     logger.info(f'发送消息，文本：{msg}')
     try:
-        response = await async_request.post(addr, json=msg)
-        logger.info(f'发送消息，结果：{response.json()}')
+        async with httpx.AsyncClient(verify=False) as client:
+            response = await client.post(addr, json=msg, timeout=30)
+            logger.info(f'发送消息，结果：{response.json()}')
     except Exception as error:
         logger.info(f'向机器人发送测试报告失败，错误信息：\n{error}')
 
@@ -96,7 +99,9 @@ async def call_back_for_pipeline(task_id, call_back_info: list, extend: dict, st
         })
 
         try:
-            response = await async_request.request(**call_back)
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.request(**call_back)
+                logger.info(f'发送消息，结果：{response.json()}')
             call_back_obj.success(response.text)
             logger.info(f'回调{call_back.get("url")}结束: \n{response.text}')
             msg = call_back_webhook_msg(call_back.get("json", {}))

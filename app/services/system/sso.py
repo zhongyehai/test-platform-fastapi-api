@@ -1,15 +1,16 @@
+import httpx
 from fastapi import Request, Depends
 
 from ...models.system.model_factory import User, Role, UserRoles
 from ...models.config.model_factory import BusinessLine
 from ...schemas.system import sso as schema
-from utils.util import request as async_requests
 from utils.parse.parse_token import parse_token
 
 
 async def get_sso_server_info(request: Request):
     """ 获取sso相关信息 """
-    response = await async_requests.post(url=f'{request.app.conf._Sso.oss_host}/.well-known/openid-configuration')
+    async with httpx.AsyncClient(verify=False) as client:
+        response = await client.post(url=f'{request.app.conf._Sso.oss_host}/.well-known/openid-configuration', timeout=30)
     res = response.json()
     return {
         "authorization_endpoint": res["authorization_endpoint"], "token_endpoint": res["token_endpoint"],
@@ -29,7 +30,8 @@ async def get_sso_token(request: Request, code):
         "redirect_uri": sso_config.redirect_uri
     }
     request.app.logger.info(f'get_sso_token: \nurl: {url}, \ndata: {data}')
-    response = await async_requests.post(url=url, data=data)
+    async with httpx.AsyncClient(verify=False) as client:
+        response = await client.post(url=url, data=data)
     request.app.logger.info(f'get_sso_token.res.text: \n{response.text}')
     return response.json()
 

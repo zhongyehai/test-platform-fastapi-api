@@ -1,6 +1,7 @@
 import json
 import re
 
+import httpx
 import validators
 from typing import Optional, Union
 from pydantic import BaseModel as pydanticBaseModel, Field
@@ -8,7 +9,6 @@ from pydantic.error_wrappers import ValidationError
 
 from utils.client.test_runner.parser import extract_variables, parse_function, extract_functions
 from utils.util.json_util import JsonUtil
-from utils.util import request as async_request
 
 class CurrentUserModel(pydanticBaseModel):
     """ 根据token解析出来的用户信息，用于在后续处理接口逻辑的时候使用 """
@@ -286,8 +286,9 @@ class BaseForm(pydanticBaseModel, JsonUtil):
     async def validate_appium_server_is_running(self, server_ip, server_port):
         """ 校验appium服务器是否能访问 """
         try:
-            res = await async_request.get(f'http://{server_ip}:{server_port}', timeout=5)
-            if res.status_code >= 500:
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.get(url=f'http://{server_ip}:{server_port}', timeout=10)
+            if response.status_code >= 500:
                 raise
         except Exception as error:
             raise ValueError("设置的appium服务器地址不能访问，请检查")

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import httpx
+
 from ..base_model import BaseModel, fields, pydantic_model_creator
 from app.schemas.enums import SendReportTypeEnum, ReceiveTypeEnum, DataStatusEnum
 from config import job_server_host
-from utils.util import request as async_requests
 
 
 class BaseTask(BaseModel):
@@ -46,35 +47,31 @@ class BaseTask(BaseModel):
         if "create_time" in dict_task: dict_task.pop("create_time")
         if "update_time" in dict_task: dict_task.pop("update_time")
         try:
-            res = await async_requests.post(
-                url=job_server_host,
-                headers={"access-token": token},
-                json={"user_id": user_id, "task": dict_task, "task_type": task_type})
-            res_json = res.json()
-            if res_json.get("status") == 200:
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.post(
+                    url=job_server_host,
+                    headers={"access-token": token},
+                    json={"user_id": user_id, "task": dict_task, "task_type": task_type}
+                )
                 await self.enable()
-                return {"status": 1, "data": res_json}
-            else:
-                return {"status": 0, "data": res_json}
+                return response.json()
         except Exception as error:
-            return {"status": 0, "data": str(error)}
+            raise ValueError("启用任务失败")
 
     async def disable_task(self, task_type, token):
         """ 禁用任务 """
         try:
-            res = await async_requests.delete(
-                url=job_server_host,
-                headers={"access-token": token},
-                json={"task_code": f'{task_type}_{self.id}'}
-            )
-            res_json = res.json()
-            if res_json.get("status") == 200:
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.request(
+                    method="DELETE",
+                    url=job_server_host,
+                    headers={"access-token": token},
+                    json={"task_code": f'{task_type}_{self.id}'}
+                )
                 await self.disable()
-                return {"status": 1, "data": res_json}
-            else:
-                return {"status": 0, "data": res_json}
+                return response.json()
         except Exception as error:
-            return {"status": 0, "data": str(error)}
+            raise ValueError("禁用任务失败")
 
     @classmethod
     async def clear_case_quote(cls, case_model, suite_model):

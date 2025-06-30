@@ -1,6 +1,13 @@
 import datetime
+import asyncio
+import copy
+import json
 
-from utils.util.file_util import FileUtil
+import httpx
+from fastapi import Request, Depends
+
+from ...schemas.system import job as schema
+from ...schemas.enums import ReceiveTypeEnum, DataStatusEnum
 from ...models.assist.hits import Hits
 from ...models.autotest.case import ApiCase, UiCase, AppCase
 from ...models.autotest.page import ApiMsg
@@ -8,20 +15,12 @@ from ...models.autotest.project import ApiProject, ApiProjectEnv, UiProject, App
 from ...models.autotest.step import ApiStep, UiStep, AppStep
 from ...models.autotest.suite import ApiCaseSuite, UiCaseSuite, AppCaseSuite
 from ...models.autotest.task import ApiTask, UiTask, AppTask
-from ...schemas.system import job as schema
-import asyncio
-import copy
-import json
-from fastapi import Request, Depends
-
-
 from ...models.system.model_factory import ApschedulerJobs, JobRunLog
 from ...models.config.model_factory import BusinessLine
-from app.schemas.enums import ReceiveTypeEnum, DataStatusEnum
 from ...models.autotest.model_factory import ApiProject as Project, ApiReport, ApiReportCase, ApiReportStep, \
     UiReport, UiReportCase, UiReportStep, AppReport, AppReportCase, AppReportStep
+from utils.util.file_util import FileUtil
 from utils.message.send_report import send_business_stage_count
-from utils.util import request as async_request
 from config import job_server_host
 
 
@@ -293,14 +292,16 @@ async def get_job_detail(request: Request, form: schema.GetJobForm = Depends()):
 async def enable_job(request: Request, form: schema.RunJobForm):
     task_conf = getattr(JobFuncs, form.func_name).__doc__
     try:
-        res = await async_request.post(
-            url=job_server_host,
-            headers={"access-token": request.headers.get("access-token")},
-            json={
-                "task": form.loads(task_conf),
-                "task_type": "cron"
-            }
-        )
+        async with httpx.AsyncClient(verify=False) as client:
+            res = await client.post(
+                job_server_host,
+                headers={"access-token": request.headers.get("access-token")},
+                json={
+                    "task": form.loads(task_conf),
+                    "task_type": "cron"
+                },
+                timeout=30
+            )
         request.app.logger.info(f'添加任务【{form.func_name}】响应: \n{res.json()}')
         return request.app.success('操作成功')
     except:
@@ -309,12 +310,13 @@ async def enable_job(request: Request, form: schema.RunJobForm):
 
 async def disable_job(request: Request, form: schema.RunJobForm):
     try:
-        res = await async_request.delete(
-            url=job_server_host,
-            headers={"access-token": request.headers.get("access-token")},
-            json={
-                "task_code": form.task_code
-            })
+        async with httpx.AsyncClient(verify=False) as client:
+            res = await client.request(
+                method="DELETE",
+                url=job_server_host,
+                headers={"access-token": request.headers.get("access-token")},
+                json={"task_code": form.task_code}
+            )
         request.app.logger.info(f'删除任务【{form.task_code}】响应: \n{res.json()}')
         return request.app.success('操作成功')
     except:

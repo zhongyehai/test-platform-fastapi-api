@@ -9,7 +9,6 @@ import httpx
 
 from ..base_model import fields, BaseModel
 from app.schemas.enums import WebHookTypeEnum
-from utils.util import request as async_requests
 
 
 class WebHook(BaseModel):

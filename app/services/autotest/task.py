@@ -53,14 +53,20 @@ async def add_task(request: Request, form: schema.AddTaskForm):
 
 async def change_task(request: Request, form: schema.EditTaskForm):
     model = ApiTask if request.app.test_type == "api" else AppTask if request.app.test_type == "app" else UiTask
-    await model.filter(id=form.id).update(**form.get_update_data(request.state.user.id))
+    update_result = await model.filter(id=form.id).update(**form.get_update_data(request.state.user.id))
+    if update_result == 1:
+        task = await model.filter(id=form.id).first()
+        if task.is_enable():  # 如果任务是启动中，则把内存中的任务更新
+            await task.disable_task(request.app.test_type, request.headers.get("access-token"))
+            await task.enable_task(request.app.test_type, request.state.user.id, request.headers.get("access-token"))
     return request.app.put_success()
 
 
 async def delete_task(request: Request, form: schema.GetTaskForm):
     model = ApiTask if request.app.test_type == "api" else AppTask if request.app.test_type == "app" else UiTask
     task = await model.validate_is_exist("任务不存在", id=form.id)
-    if task.is_enable(): ValueError("请先禁用任务")
+    if task.is_enable():  # 如果任务是启动中，则把内存中的任务删除
+        await task.disable_task(request.app.test_type, request.headers.get("access-token"))
     await task.model_delete()
     return request.app.delete_success()
 
@@ -68,21 +74,15 @@ async def delete_task(request: Request, form: schema.GetTaskForm):
 async def enable_task(request: Request, form: schema.GetTaskForm):
     model = ApiTask if request.app.test_type == "api" else AppTask if request.app.test_type == "app" else UiTask
     task = await model.validate_is_exist("任务不存在", id=form.id)
-    res = await task.enable_task(request.app.test_type, request.state.user.id, request.headers.get("access-token"))
-    if res["status"] == 1:
-        return request.app.success("任务启用成功", data=res["data"])
-    else:
-        return request.app.fail("任务启用失败", data=res["data"])
+    await task.enable_task(request.app.test_type, request.state.user.id, request.headers.get("access-token"))
+    return request.app.success("任务启用成功")
 
 
 async def disable_task(request: Request, form: schema.GetTaskForm):
     model = ApiTask if request.app.test_type == "api" else AppTask if request.app.test_type == "app" else UiTask
     task = await model.validate_is_exist("任务不存在", id=form.id)
-    res = await task.disable_task(request.app.test_type, request.headers.get("access-token"))
-    if res['status'] == 1:
-        return request.app.success("任务禁用成功", data=res["data"])
-    else:
-        return request.app.fail("任务禁用失败", data=res["data"])
+    await task.disable_task(request.app.test_type, request.headers.get("access-token"))
+    return request.app.success("任务禁用成功")
 
 
 async def run_task(request: Request, form: schema.RunTaskForm, background_tasks: BackgroundTasks):
