@@ -42,6 +42,13 @@ async def change_step_status(request: Request, form: schema.ChangeStepStatusForm
     return request.app.put_success()
 
 
+async def change_step_element(request: Request, form: schema.ChangeStepElement):
+    step_model = ApiStep if request.app.test_type == "api" else AppStep if request.app.test_type == "app" else UiStep
+    data = {"api_id": form.element_id} if request.app.test_type == "api" else {"element_id": form.element_id}
+    await step_model.filter(id=form.id).update(**data)
+    return request.app.put_success()
+
+
 async def copy_step(request: Request, form: schema.CopyStepForm):
     case_model, step_model = ApiCase, ApiStep
     if request.app.test_type == "app":

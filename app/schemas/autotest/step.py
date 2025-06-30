@@ -21,6 +21,11 @@ class GetStepForm(BaseForm):
     id: int = Field(..., title="步骤id")
 
 
+class ChangeStepElement(GetStepForm):
+    """ 修改步骤的元素/接口 """
+    element_id: int = Field(..., title="接口/元素id")
+
+
 class DeleteStepForm(BaseForm):
     """ 批量删除步骤 """
     id_list: list = Field(..., title="步骤id list")

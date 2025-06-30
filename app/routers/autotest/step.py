@@ -19,6 +19,7 @@ step_router.add_get_route(
 step_router.add_put_route("/sort", step_service.change_step_sort, summary="步骤排序")
 step_router.add_put_route("/status", step_service.change_step_status, summary="修改步骤状态（是否执行）")
 step_router.add_post_route("/copy", step_service.copy_step, summary="复制步骤")
+step_router.add_put_route("/element", step_service.change_step_element, summary="修改步骤的接口/元素")
 step_router.add_get_route("", step_service.get_step_detail, summary="获取步骤详情")
 step_router.add_post_route("", step_service.add_step, summary="新增步骤")
 step_router.add_put_route("", step_service.change_step, summary="修改步骤")
