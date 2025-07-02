@@ -18,6 +18,13 @@ async def get_body(request: Request) -> str:
     return body.decode()
 
 
+def check_is_log_response(path):
+    """ 不打日志的接口 """
+    return all(sub not in path for sub in [
+        'download', '/report/step-img', '/report/suite-list', '/docs', '/redoc', '/api/openapi'
+    ])
+
+
 def register_request_hook(app):
     @app.middleware("http")
     async def before_request(request: Request, call_next):
@@ -52,7 +59,7 @@ def register_request_hook(app):
         response: Response = await call_next(request)
 
         # 打印响应
-        if 'download' not in request.url.path and '/report/step-img' not in request.url.path and '/report/suite-list' not in request.url.path:
+        if check_is_log_response(request.url.path):
             response_body = b"".join([chunk async for chunk in response.body_iterator])
             request.app.logger.info(
                 f'【{request.method}】【{request_id}】【{request.url.path}】: {json.loads(response_body.decode())}')

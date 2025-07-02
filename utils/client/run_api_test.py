@@ -23,7 +23,7 @@ class RunApi(RunTestRunner):
     async def parse_and_run(self):
         """ 把解析放到异步线程里面 """
         self.time_out = await Config.get_request_time_out()
-        self.response_time_level = await Config.get_response_time_level()
+        self.test_plan["response_time_level"] = await Config.get_response_time_level()
         self.front_report_addr = f'{await Config.get_report_host()}{await Config.get_api_report_addr()}'
         self.test_plan["pause_step_time_out"] = await Config.get_pause_step_time_out()
         await Script.create_script_file(self.env_code)  # 创建所有函数文件
@@ -89,7 +89,7 @@ class RunCase(RunTestRunner):
     async def parse_and_run(self):
         """ 把解析放到异步线程里面 """
         self.time_out = await Config.get_request_time_out()
-        self.response_time_level = await Config.get_response_time_level()
+        self.test_plan["response_time_level"] = await Config.get_response_time_level()
         self.front_report_addr = f'{await Config.get_report_host()}{await Config.get_api_report_addr()}'
         self.test_plan["pause_step_time_out"] = await Config.get_pause_step_time_out()
         await Script.create_script_file(self.env_code)  # 创建所有函数文件

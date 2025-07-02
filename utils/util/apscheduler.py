@@ -10,47 +10,6 @@ from tortoise import Tortoise
 from config import main_server_host
 from utils.parse.parse_cron import parse_cron
 
-async def request_run_task_api(task_code, task_type, skip_holiday=True):
-    """ 调执行任务接口 """
-    logger.info(f'{"*" * 20} 开始触发执行定时任务 {"*" * 20}')
-
-    # 判断是否设置了跳过节假日、调休日
-    if skip_holiday:
-
-        # 查配置的节假日
-        db = Tortoise.get_connection("default")
-        result = await db.execute_query_dict("SELECT `value` FROM config_config WHERE name='holiday_list'")
-        holiday_list = json.loads(result[0]['value'])
-
-        if datetime.datetime.today().strftime("%m-%d") in holiday_list:
-            logger.info(f'{"*" * 20} 节假日/调休日，跳过 {"*" * 20}')
-            return None
-
-    if isinstance(task_code, str) and task_code.startswith('cron'):  # 系统定时任务
-        api_addr = '/system/job/run'
-    else:  # 自动化测试定时任务
-        api_addr = f'/{task_type}-test/task/run'
-
-    task_type, task_id = task_code.split("_", 1)  # api_1  cron_cron_xx_
-
-    async with httpx.AsyncClient(verify=False) as client:
-        response = await client.post(
-            f'{main_server_host}/api{api_addr}',
-            json={
-                "id": task_id,  # 系统定时任务
-                "id_list": [task_id],  # 自动化测试任务
-                "func_name": task_id,
-                "trigger_type": "cron"
-            },
-            timeout=30
-        )
-        logger.info(f'{"*" * 20} 定时任务触发完毕 {"*" * 20}')
-        logger.info(f'{"*" * 20} 触发响应为：{response.json()} {"*" * 20}')
-
-    # TODO 更新next_run_time
-    return response
-
-
 class AsyncIOScheduler(_AsyncIOScheduler):
 
     async def init_scheduler(self, task_list):
@@ -98,3 +57,52 @@ class AsyncIOScheduler(_AsyncIOScheduler):
             job_id = job[0]["job_id"]
             self.remove_job(job_id, *args, **kwargs)
             await db.execute_script(f'delete FROM apscheduler_jobs WHERE job_id="{job_id}"')
+
+
+scheduler = AsyncIOScheduler()
+
+
+async def request_run_task_api(task_code, task_type, skip_holiday=True):
+    """ 调执行任务接口 """
+    logger.info(f'{"*" * 20} 开始触发执行定时任务 {"*" * 20}')
+
+    # 判断是否设置了跳过节假日、调休日
+    if skip_holiday:
+
+        # 查配置的节假日
+        db = Tortoise.get_connection("default")
+        result = await db.execute_query_dict("SELECT `value` FROM config_config WHERE name='holiday_list'")
+        holiday_list = json.loads(result[0]['value'])
+
+        if datetime.datetime.today().strftime("%m-%d") in holiday_list:
+            logger.info(f'{"*" * 20} 节假日/调休日，跳过 {"*" * 20}')
+            return None
+
+    if isinstance(task_code, str) and task_code.startswith('cron'):  # 系统定时任务
+        api_addr = '/system/job/run'
+    else:  # 自动化测试定时任务
+        api_addr = f'/{task_type}-test/task/run'
+
+    task_type, task_id = task_code.split("_", 1)  # api_1  cron_cron_xx_
+
+    async with httpx.AsyncClient(verify=False) as client:
+        response = await client.post(
+            f'{main_server_host}/api{api_addr}',
+            json={
+                "id": task_id,  # 系统定时任务
+                "id_list": [task_id],  # 自动化测试任务
+                "func_name": task_id,
+                "trigger_type": "cron"
+            },
+            timeout=30
+        )
+        logger.info(f'{"*" * 20} 定时任务触发完毕 {"*" * 20}')
+        logger.info(f'{"*" * 20} 触发响应为：{response.json()} {"*" * 20}')
+
+    # 更新 next_run_time
+    db = Tortoise.get_connection("default")
+    job_data = await db.execute_query_dict(f"SELECT `job_id` FROM apscheduler_jobs WHERE task_code='{task_code}'")
+    job = scheduler.get_job(job_data[0]["job_id"])
+    await db.execute_script(
+        f"update apscheduler_jobs set next_run_time = '{job.next_run_time}' WHERE task_code='{task_code}'")
+    return response

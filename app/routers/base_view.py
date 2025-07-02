@@ -114,6 +114,8 @@ class APIRouter(fastAPIRouter):
                 kwargs.setdefault('dependencies', []).append(Depends(self.check_login))
             if auth == 'api':  # 验证接口权限
                 kwargs.setdefault('dependencies', []).append(Depends(self.check_api_permission))
+        if kwargs.get("response_model", None) is None:  # 自动加响应模型
+            kwargs["response_model"] = SuccessModel
         return self.add_api_route(path, func, methods=methods, *args, **kwargs)
 
     def add_get_route(self, path, func, auth: Union[str, bool] = 'login', *args, **kwargs):

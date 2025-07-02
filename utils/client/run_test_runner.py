@@ -2,24 +2,21 @@ import copy
 import types
 import importlib
 
+from loguru import logger
+
 from app.models.autotest.model_factory import ApiProject, ApiProjectEnv, ApiCaseSuite, ApiCase, ApiStep, ApiMsg, \
-    ApiReport, ApiReportCase, ApiReportStep, UiProject, UiProjectEnv, UiElement, UiCaseSuite, UiCase, \
-    UiStep, \
-    UiReport, UiReportCase, UiReportStep, AppProject, AppProjectEnv, AppElement, AppCaseSuite, \
-    AppCase, \
-    AppStep, AppReport, AppReportCase, AppReportStep
+    ApiReport, ApiReportCase, ApiReportStep, UiProject, UiProjectEnv, UiElement, UiCaseSuite, UiCase, UiStep, UiReport, \
+    UiReportCase, UiReportStep, AppProject, AppProjectEnv, AppElement, AppCaseSuite, AppCase, AppStep, AppReport, \
+    AppReportCase, AppReportStep
 from app.models.assist.hits import Hits
 from app.models.config.webhook import WebHook
 from app.schemas.enums import TriggerTypeEnum, ReceiveTypeEnum
 from app.models.system.user import User
 from app.models.config.model_factory import RunEnv
-
 from app.models.assist.model_factory import Script
 from app.models.config.model_factory import Config
 from utils.client.test_runner.api import TestRunner
 from utils.client.test_runner.utils import build_url
-# from utils.log import logger
-from loguru import logger
 from utils.client.parse_model import ProjectModel, ApiModel, CaseModel, ElementModel
 from utils.message.send_report import send_report, call_back_for_pipeline
 from utils.client.test_runner import validate_func
@@ -46,7 +43,6 @@ class RunTestRunner:
         self.parsed_element_dict = {}
         self.run_env = None
         self.report = None
-        self.response_time_level = {"slow": 0, "very_slow": 0}
         self.api_model = ApiMsg
         self.element_model = None
 
@@ -60,9 +56,6 @@ class RunTestRunner:
                 self.report_model = ApiReport
                 self.report_case_model = ApiReportCase
                 self.report_step_model = ApiReportStep
-                # self.time_out = Config.get_request_time_out()  # TODO await
-                # self.response_time_level = Config.get_response_time_level()  # TODO await
-                # self.front_report_addr = f'{Config.get_report_host()}{Config.get_api_report_addr()}'  # TODO await
             case "ui":  # web-ui自动化
                 self.project_model = UiProject
                 self.project_env_model = UiProjectEnv
@@ -73,8 +66,6 @@ class RunTestRunner:
                 self.report_model = UiReport
                 self.report_case_model = UiReportCase
                 self.report_step_model = UiReportStep
-                # self.wait_time_out = Config.get_wait_time_out() # TODO await
-                # self.front_report_addr = f'{Config.get_report_host()}{Config.get_web_ui_report_addr()}' # TODO await
             case _:  # app-ui自动化
                 self.project_model = AppProject
                 self.project_env_model = AppProjectEnv
@@ -85,8 +76,6 @@ class RunTestRunner:
                 self.report_model = AppReport
                 self.report_case_model = AppReportCase
                 self.report_step_model = AppReportStep
-                # self.wait_time_out = Config.get_wait_time_out()
-                # self.front_report_addr = f'{Config.get_report_host()}{Config.get_app_ui_report_addr()}' # TODO await
 
         # testRunner需要的数据格式
         self.test_plan = {
@@ -96,8 +85,7 @@ class RunTestRunner:
             "report_model": self.report_model,
             "report_case_model": self.report_case_model,
             "report_step_model": self.report_step_model,
-            "response_time_level": self.response_time_level,
-            # "pause_step_time_out": Config.get_pause_step_time_out(),
+            "response_time_level": {"slow": 0, "very_slow": 0},
             "project_mapping": {
                 "functions": {},
                 "variables": {},
@@ -285,34 +273,6 @@ class RunTestRunner:
         else:  # 串行执行
             await self.sync_run_case()
 
-    # async def _run_case(self, case, run_case_dict, index):
-    #     runner = TestRunner()
-    #     await runner.run(case)
-    #     self.update_run_case_status(run_case_dict, index, runner.summary)
-    #
-    # def _async_run_case(self, case, run_case_dict, index):
-    #     """ 多线程运行用例 """
-    #     Thread(target=self._run_case, args=[case, run_case_dict, index]).start()
-
-    # def update_run_case_status(self, run_dict, run_index, summary):
-    #     """ 每条用例执行完了都更新对应的运行状态，如果更新后的结果是用例全都运行了，则生成测试报告"""
-    #     run_dict[run_index] = summary
-    #     if all(run_dict.values()):  # 全都执行完毕
-    #         self.report.run_case_finish()
-    #         all_summary = run_dict[0]
-    #         all_summary["stat"]["count"]["step"] = self.count_step
-    #         all_summary["stat"]["count"]["api"] = len(self.api_set)
-    #         all_summary["stat"]["count"]["element"] = len(self.element_set)
-    #         for index, res in enumerate(run_dict.values()):
-    #             if index != 0:
-    #                 self.build_summary(all_summary, res, ["case_list", "step_list"])  # 合并用例统计, 步骤统计
-    #                 # all_summary["details"].extend(res["details"])  # 合并测试用例数据
-    #                 all_summary["success"] = all([all_summary["success"], res["success"]])  # 测试报告状态
-    #                 all_summary["time"]["case_duration"] = summary["time"]["case_duration"]  # 总共耗时取运行最长的
-    #                 all_summary["time"]["step_duration"] = summary["time"]["step_duration"]  # 总共耗时取运行最长的
-    #
-    #         self.save_report_and_send_message(summary)
-
     async def sync_run_case(self):
         """ 单线程运行用例 """
         await self.report.run_case_start()
@@ -325,7 +285,7 @@ class RunTestRunner:
         summary["stat"]["count"]["api"] = len(self.api_set)
         summary["stat"]["count"]["element"] = len(self.element_set)
         if self.run_type == "api":
-            summary["stat"]["response_time"]["response_time_level"] = self.response_time_level
+            summary["stat"]["response_time"]["response_time_level"] = self.test_plan["response_time_level"]
         await self.save_report_and_send_message(summary)
 
     async def send_report_if_task(self, notify_list):

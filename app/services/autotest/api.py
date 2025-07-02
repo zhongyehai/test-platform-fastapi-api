@@ -152,7 +152,7 @@ async def run_api(request: Request, form: schema.RunApiMsgForm):
         summary["env"]["code"], summary["env"]["name"] = env_code, env_code
         report = await Report.get_new_report(
             batch_id=batch_id,
-            run_id=form.id_list,
+            trigger_id=form.id_list,
             name=first_api["name"],
             run_type="api",
             env=env_code,

@@ -100,7 +100,7 @@ class JobFuncs:
         await AppReportStep.filter(report_id__in=delete_report_id).delete()
 
     @classmethod
-    def cron_clear_step(cls):
+    async def cron_clear_step(cls):
         """
         {
             "name": "清理用例不存在的步骤",
@@ -108,9 +108,9 @@ class JobFuncs:
             "cron": "0 10 2 * * ?"
         }
         """
-        ApiCase.batch_delete_step(ApiStep)
-        UiCase.batch_delete_step(UiStep)
-        AppCase.batch_delete_step(AppStep)
+        await ApiCase.batch_delete_step(ApiStep)
+        await UiCase.batch_delete_step(UiStep)
+        await AppCase.batch_delete_step(AppStep)
 
     @classmethod
     async def cron_api_use_count(cls):
@@ -315,7 +315,7 @@ async def disable_job(request: Request, form: schema.RunJobForm):
                 method="DELETE",
                 url=job_server_host,
                 headers={"access-token": request.headers.get("access-token")},
-                json={"task_code": form.task_code}
+                json={"task_code": f'cron_{form.func_name}'}
             )
         request.app.logger.info(f'删除任务【{form.task_code}】响应: \n{res.json()}')
         return request.app.success('操作成功')
