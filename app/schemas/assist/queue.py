@@ -78,7 +78,7 @@ class SendMessageForm(GetQueueTopicForm):
     """ 发送消息 """
     tag: Optional[str] = Field(None, title="tag")
     options: Optional[dict] = Field({}, title="用于指定参数，KEYS、或者其他自定义参数")
-    message: Union[dict, list, str] = Field({}, title="消息内容")
+    message: Union[list, dict, str] = Field({}, title="消息内容")
     message_type: str = Field(..., title="消息类型")
 
 

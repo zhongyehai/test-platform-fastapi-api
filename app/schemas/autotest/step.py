@@ -64,7 +64,7 @@ class AddStepForm(BaseForm):
     body_type: ApiBodyTypeEnum = Field(
         ApiBodyTypeEnum.JSON.value, title="请求体数据类型", description="json/form/text/urlencoded")
     data_form: Optional[List[DataFormModel]] = Field(None, title="form-data参数")
-    data_json: Union[dict, list] = Field({}, title="json参数")
+    data_json: Union[list, dict] = Field({}, title="json参数")
     data_urlencoded: Optional[dict] = Field({}, title="urlencoded")
     data_text: Optional[str] = Field('', title="字符串参数")
     replace_host: Optional[int] = Field(0, title="是否使用用例所在项目的域名")

@@ -39,7 +39,7 @@ class BaseCase(BaseModel):
     async def batch_delete_step(cls, step_model):
         """ 清理测试用例不存在的步骤 """
         case_id_list = [data["id"] for data in await cls.all().values("id")]
-        await step_model.query.filter(case_id__notin=case_id_list).delete()
+        await step_model.filter(case_id__notin=case_id_list).delete()
 
     # @classmethod
     # def get_quote_case_from(cls, case_id, project_model, suite_model, case_model):
@@ -61,14 +61,15 @@ class BaseCase(BaseModel):
     async def merge_variables(cls, from_case_id, to_case_id):
         """ 当用例引用的时候，自动将被引用用例的自定义变量合并到发起引用的用例上 """
         if from_case_id:
-            from_case, to_case = await cls.filter(id=from_case_id).first(), await cls.filter(id=to_case_id).first()
-            from_case_variables = {variable["key"]: variable for variable in from_case.variables}
-            to_case_variables = {variable["key"]: variable for variable in to_case.variables}
+            from_variables = await cls.filter(id=from_case_id).first().values("variables")
+            to_variables = await cls.filter(id=to_case_id).first().values("variables")
+            from_case_variables = {variable["key"]: variable for variable in from_variables["variables"]}
+            to_case_variables = {variable["key"]: variable for variable in to_variables["variables"]}
 
-            for from_variable_key, from_case_variable in from_case_variables.items():
-                to_case_variables.setdefault(from_variable_key, from_case_variable)
+            for from_variable_key, from_variable_value in from_case_variables.items():
+                to_case_variables.setdefault(from_variable_key, from_variable_value)
+            await cls.filter(id=to_case_id).update(variables=[value for key, value in to_case_variables.items() if key])
 
-            await to_case.model_update({"variables": [value for key, value in to_case_variables.items() if key]})
 
     @classmethod
     async def merge_output(cls, case_id, source_list=[]):

@@ -91,7 +91,8 @@ async def copy_case(request: Request, form: schema.GetCaseForm):
 
     # 复制用例
     old_case = dict(case)
-    old_case["name"], old_case["status"] = old_case["name"] + "_copy", CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value
+    # old_case["name"], old_case["status"] = old_case["name"] + "_copy", CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value
+    old_case["status"] = CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value
     new_case = await case_model.model_create(old_case, request.state.user)
 
     # 复制步骤

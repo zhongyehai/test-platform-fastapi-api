@@ -57,7 +57,7 @@ async def copy_step(request: Request, form: schema.CopyStepForm):
         case_model, step_model = UiCase, UiStep
 
     step = await step_model.filter(id=form.id).first()
-    step.name = f'{step.name}_copy'
+    # step.name = f'{step.name}_copy'
     if form.case_id:
         step.case_id = form.case_id
     new_step = await step_model.model_create(dict(step), request.state.user)

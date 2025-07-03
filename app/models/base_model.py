@@ -65,7 +65,7 @@ class BaseModel(models.Model, JsonUtil):
             user_id = kwargs.pop("user_id")
             data["create_user"] = data["update_user"] = user_id
         
-        data["name"] = data.get("name", "") + "_copy"
+        # data["name"] = data.get("name", "") + "_copy"
         if "id" in data: data.pop("id")
         return await self.__class__.model_create(data)
 
