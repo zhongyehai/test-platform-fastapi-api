@@ -1,14 +1,14 @@
 import copy
 from unittest.case import SkipTest
 
-from . import exceptions, response, extract, logger
+from . import exceptions, response, extract # , logger
 from .client.http import HttpSession
 from .client.webdriver import WebDriverSession
 from .exceptions import StopTest
 from .runner_context import SessionContext
 from .webdriver_action import GetWebDriver, GetAppDriver
 from utils.logs.redirect_print_log import RedirectPrintLogToMemory
-
+from utils.logs.log import logger
 
 class Runner:
     """ Running testcases.
@@ -302,7 +302,7 @@ class Runner:
                 driver=self.driver
             )
         except (exceptions.ParamsError, exceptions.ValidationFailure, exceptions.ExtractFailure) as error:
-            logger.log_info(f"""步骤: {step_name}, 执行报错：{error}\n""")
+            logger.warning(f"""步骤: {step_name}, 执行报错：{error}\n""")
             raise
         finally:
             self.validation_results = self.session_context.validation_results
@@ -380,7 +380,7 @@ class Runner:
             raise RuntimeError(self.client_init_error)
 
         try:
-            logger.log_info(f"""开始执行步骤: {step_dict.get("name")}""")
+            logger.info(f"""开始执行步骤: {step_dict.get("name")}""")
             await self._run_test(step_dict)
             self.client_session.meta_data["result"] = "success"
         except Exception as error:  # 捕获步骤运行中报错(报错、断言不通过、跳过测试)

@@ -56,16 +56,6 @@ def update_dict_to_list(from_dict: dict, to_list: list):
     return parse_dict_to_list(variables)
 
 
-# def list_to_dict(data: list):
-#     """ [{}] => {} """
-#     # res = {}
-#     # for item in data:
-#     #     for key, value in item.items():
-#     #         res[key] = value
-#     # return res
-#     return {key: value for item in data for key, value in item.items()}
-
-
 def extract_functions(content):
     """ 从字符串内容中提取所有自定义函数，格式为${fun()}
     @param (str) content
@@ -81,42 +71,6 @@ def extract_functions(content):
         return re.findall(function_regexp, content)
     except TypeError:
         return []
-
-
-# def parse_function(content):
-#     """ 从字符串内容中解析函数名和参数
-#         >>> parse_function("func()")
-#         {"func_name": "func", "args": [], "kwargs": {}}
-#
-#         >>> parse_function("func(5)")
-#         {"func_name": "func", "args": [5], "kwargs": {}}
-#
-#         >>> parse_function("func(1, 2)")
-#         {"func_name": "func", "args": [1, 2], "kwargs": {}}
-#
-#         >>> parse_function("func(a=1, b=2)")
-#         {"func_name": "func", "args": [], "kwargs": {"a": 1, "b": 2}}
-#
-#         >>> parse_function("func(1, 2, a=3, b=4)")
-#         {"func_name": "func", "args": [1, 2], "kwargs": {"a":3, "b":4}}
-#
-#     """
-#     matched = function_regexp_compile.match(content)
-#     function_meta = {"func_name": matched.group(1), "args": [], "kwargs": {}}
-#     args_str = matched.group(2).strip()
-#     if args_str == "":
-#         return function_meta
-#
-#     args_list = args_str.split(",")
-#     for arg in args_list:
-#         arg = arg.strip()
-#         if "=" in arg:
-#             key, value = arg.split("=")
-#             function_meta["kwargs"][key.strip()] = parse_string_value(value.strip())
-#         else:
-#             function_meta["args"].append(parse_string_value(arg))
-#
-#     return function_meta
 
 
 def extract_variables(content):

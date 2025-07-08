@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from tortoise import exceptions as tortoise_exceptions
 
 from app.models.system.model_factory import SystemErrorRecord
+from utils.logs.log import logger
 from utils.message.send_report import send_system_error
 
 
@@ -103,7 +104,7 @@ def register_exception_handler(app):
 def get_error_msg(exc):
     # error_msg = exc.errors()
     error = exc.errors()[0]
-    print(error)
+    logger.error(error)
     filed_name = error["loc"][-1]
     error_type, msg = error["type"], error["msg"]
 

@@ -1,7 +1,7 @@
 import datetime
 import traceback
 
-from loguru import logger
+from utils.logs.log import logger
 from . import exceptions, parser, runner
 
 

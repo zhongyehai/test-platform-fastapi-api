@@ -38,8 +38,11 @@ class VariablesModel(DataFormModel):
 
 
 class ExtractModel(HeaderModel):
+    value: Optional[Union[str, int, None]] = None
     status: Union[int, None] = None
     data_source: Union[str, None] = None
+    extract_type: Union[str, None] = None
+    update_to_header: Optional[Union[str, bool, int, None]] = None
 
 
 class ValidateModel(HeaderModel):
@@ -51,7 +54,8 @@ class ValidateModel(HeaderModel):
 
 
 class SkipIfModel(HeaderModel):
-    expect: Union[str, None] = None
+    status: Optional[Union[int, None]] = None
+    expect: Union[str, int, None] = None
     data_type: Union[str, None] = None
     skip_type: Union[str, None] = None
     comparator: Union[str, None] = None
@@ -70,17 +74,15 @@ class AddCaseDataForm(pydanticBaseModel):
     desc: str = Field(..., title="描述")
 
 
-class AddAppElementDataForm(pydanticBaseModel):
-    name: str = Field(..., title="名字")
-    by: str = Field(..., title="定位方式")
-    element: str = Field(..., title="定位表达式")
-    template_device: int = Field(..., title="定位元素时参照的手机")
-
-
 class AddUiElementDataForm(pydanticBaseModel):
     name: str = Field(..., title="名字")
     by: str = Field(..., title="定位方式")
     element: str = Field(..., title="定位表达式")
+
+
+class AddAppElementDataForm(AddUiElementDataForm):
+    wait_time_out: Optional[int] = Field(5, title="元素等待超时时间")
+    template_device: int = Field(..., title="定位元素时参照的手机")
 
 
 class BaseForm(pydanticBaseModel, JsonUtil):

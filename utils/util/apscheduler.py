@@ -4,11 +4,12 @@ import json
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler as _AsyncIOScheduler
-from loguru import logger
 from tortoise import Tortoise
 
 from config import main_server_host
 from utils.parse.parse_cron import parse_cron
+from utils.logs.log import job_logger as logger
+
 
 class AsyncIOScheduler(_AsyncIOScheduler):
 
@@ -23,7 +24,7 @@ class AsyncIOScheduler(_AsyncIOScheduler):
         logger.info(f'task_list: {task_list}')
         for task in task_list:
             task_type, task_id = task["task_code"].split("_", 1)
-            print(f'task: {task}')
+            logger.info(f'task: {task}')
             await self.add_new_job(
                 task_code=f'{task_type}_{task_id}',
                 func=request_run_task_api,

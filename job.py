@@ -4,10 +4,9 @@ from fastapi.encoders import jsonable_encoder
 from tortoise import Tortoise
 from tortoise.contrib.fastapi import register_tortoise
 from pydantic import BaseModel, Field
-from loguru import logger
 
 from config import job_server_port, tortoise_orm_conf
-from utils.util.apscheduler import AsyncIOScheduler, request_run_task_api
+from utils.util.apscheduler import scheduler, request_run_task_api, logger
 
 job = FastAPI(
     docs_url=None,
@@ -24,8 +23,6 @@ register_tortoise(
     config=tortoise_orm_conf,
     add_exception_handlers=True
 )
-
-scheduler = AsyncIOScheduler()
 
 
 class GetJobForm(BaseModel):

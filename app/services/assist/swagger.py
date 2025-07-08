@@ -4,6 +4,7 @@ import os.path
 import requests
 from fastapi import Request, Depends
 
+from utils.logs.log import logger
 from ...models.assist.model_factory import SwaggerPullLog
 from ...models.autotest.model_factory import ApiProject, ApiModule, ApiMsg
 from utils.util.file_util import SWAGGER_FILE_ADDRESS, FileUtil
@@ -187,7 +188,7 @@ def parse_openapi3_request_body(request_body, data_models):
             pass
 
         else:  # 其他参数
-            print(f"content_type: {content_type}")
+            logger.info(f"content_type: {content_type}")
     return json_data, form_data
 
 

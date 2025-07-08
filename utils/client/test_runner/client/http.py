@@ -4,14 +4,13 @@ import traceback
 from datetime import datetime
 from urllib import parse
 
-from loguru import logger
 import httpx
 from httpx import Response, HTTPStatusError
 
 from utils.util.file_util import FileUtil
 from utils.client.test_runner.client import BaseSession
 from utils.client.test_runner.utils import build_url, lower_dict_keys, omit_long_data
-
+from utils.logs.log import logger
 
 class ApiResponse(Response):
 
@@ -137,7 +136,7 @@ class HttpSession(BaseSession):
         try:
             response.raise_for_status()
         except HTTPStatusError as e:
-            logger.error(u"{exception}".format(exception=str(e)))
+            logger.error(f"{traceback.format_exc()}")
         else:
             logger.info(
                 f"""步骤: {name}, 响应状态码: {response.status_code}, 耗时: {self.meta_data["stat"]["elapsed_ms"]} ms, response_length: {content_size} bytes\n"""
@@ -149,19 +148,18 @@ class HttpSession(BaseSession):
         """ 发送HTTP请求，并捕获由于连接问题而可能发生的任何异常。 """
         try:
             self.request_at = datetime.now()
-            logger.info(f"_send_request_safe_mode.try: method: {method}, url: {url}, kwargs: {kwargs}")
+            logger.info(f"method: {method}, url: {url}, kwargs: {kwargs}")
             # requests库出现过卡死发不出请求的情况，换为httpx后没有出现问题
-            # response = httpx.request(method, url, **kwargs)
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.request(method, url, **kwargs)
             self.response_at = datetime.now()
             return response
         except HTTPStatusError as ex:
-            logger.info("_send_request_safe_mode.HTTPStatusError: \n{traceback.format_exc()}")
+            logger.info(f"{traceback.format_exc()}")
             resp = ApiResponse()
             resp.error = ex
             resp.status_code = 0
             return resp
         except Exception as e:
-            logger.error(f"_send_request_safe_mode.Exception: \n{traceback.format_exc()}")
+            logger.error(f"{traceback.format_exc()}")
             raise

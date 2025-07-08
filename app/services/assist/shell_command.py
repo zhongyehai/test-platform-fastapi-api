@@ -5,6 +5,8 @@ import time
 
 import paramiko
 from fastapi import Request, Depends
+
+from utils.logs.log import logger
 from ...schemas.assist import shell_command as schema
 
 from ...models.assist.model_factory import ShellCommandRecord
@@ -78,7 +80,7 @@ class SSHConnection:
     def wait_for_log(self, command: str, max_wait_count: int = 5, interval: int = 2):
         count = 0
         while max_wait_count > count:
-            print(f"【{datetime.datetime.now().strftime('%H:%M:%S')}】开始执行第【{count + 1}】次查询")
+            logger.info(f"【{datetime.datetime.now().strftime('%H:%M:%S')}】开始执行第【{count + 1}】次查询")
             time.sleep(interval)
 
             # 执行查询命令
@@ -93,18 +95,18 @@ class SSHConnection:
             count += 2
 
         # 如果超时仍未找到，返回 None
-        print(f"在 {max_wait_count * interval} 秒内没有找到相关日志数据")
+        logger.info(f"在 {max_wait_count * interval} 秒内没有找到相关日志数据")
         return None
 
     def exec_command(self, command: str):
-        print(f"{'*' * 20}开始执行命令: {command} {'*' * 20}")
+        logger.info(f"{'*' * 20}开始执行命令: {command} {'*' * 20}")
         stdin, stdout, stderr = self.client.exec_command(command)
         success = stderr.channel.recv_exit_status() == 0
         command_out_put = stdout.read().decode('utf-8')
-        print(f"执行结果: \n{command_out_put}")
+        logger.info(f"执行结果: \n{command_out_put}")
         if not success:
             raise RuntimeError("执行命令报错")
-        print(f"{'*' * 20}命令执行结束: {command}{'*' * 20}")
+        logger.info(f"{'*' * 20}命令执行结束: {command}{'*' * 20}")
         return command_out_put
 
     def send_shell_command(self, file_tab, content, command='start'):
@@ -159,27 +161,27 @@ class SSHConnection:
 
     def get_cmd_id(self, command_out_put: str):
         """ start命令的返回中获取cmdId """
-        print(f"{'*' * 20}开始start命令的返回中获取cmdId {'*' * 20}")
-        print(command_out_put)
+        logger.info(f"{'*' * 20}开始start命令的返回中获取cmdId {'*' * 20}")
+        logger.info(command_out_put)
         assert 'message=cmdId=' in command_out_put, f"获取 cmdId 失败，响应中没有获取到 cmdId= 相关字样"
         return re.search(r'message=cmdId=([^,]+). Processing', command_out_put).group(1)
 
     def ssh_client_get_algo_instance_id(self, cmd_id: str):
         """ 从日志中获取 algoInstanceId """
-        print(f"{'*' * 20}开始从日志中获取 algoInstanceId {'*' * 20}")
+        logger.info(f"{'*' * 20}开始从日志中获取 algoInstanceId {'*' * 20}")
         last_minutes = (datetime.datetime.now() - datetime.timedelta(minutes=1)).strftime('%H:%M')  # 上一分钟
         now_minutes = datetime.datetime.now().strftime('%H:%M')  # 当前分钟
         next_minutes = (datetime.datetime.now() + datetime.timedelta(minutes=1)).strftime('%H:%M')  # 下1分钟
-        print(f'last_minutes: {last_minutes}，now_minutes: {now_minutes}，next_minutes: {next_minutes}')
+        logger.info(f'last_minutes: {last_minutes}，now_minutes: {now_minutes}，next_minutes: {next_minutes}')
         last_minutes, now_minutes, next_minutes =  f"{last_minutes}:", f"{now_minutes}:", f"{next_minutes}:"
 
         command = f"grep 'cmdId={cmd_id}' {self.log_path} | grep 'algoInstanceId' | sort -r | head -n 1"
         wait_count, log_data = 0, None
         while wait_count < 10:
-            print(f"执行命令：{command}")
+            logger.info(f"执行命令：{command}")
             wait_count += 1
             log_data = self.wait_for_log(command, 1, interval=0)
-            print(f"执行结果：{log_data}")
+            logger.info(f"执行结果：{log_data}")
             # 确认数据是当前操作产生的
             if log_data and ((last_minutes in log_data) or (now_minutes in log_data) or (next_minutes in log_data)):
                 break

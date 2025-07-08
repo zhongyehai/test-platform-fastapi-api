@@ -6,6 +6,7 @@ from ...models.config.model_factory import WebHook
 from app.schemas.enums import WebHookTypeEnum
 from utils.message.template import debug_msg_ding_ding, debug_msg_we_chat
 from ...schemas.config import webhook as schema
+from utils.logs.log import logger
 
 async def get_webhook_list(request: Request, form: schema.GetWebHookListForm = Depends()):
     get_filed = ["id", "name", "webhook_type"]
@@ -32,7 +33,7 @@ async def debug_webhook(request: Request, form: schema.GetWebHookForm):
     try:
         return request.app.success(f"测试通过：{await webhook.debug(msg)}")
     except Exception as e:
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return request.app.fail("调试触发失败，请检查地址是否正确，网络是否通畅")
 
 

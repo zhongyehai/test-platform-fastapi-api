@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import types
 
-from utils.variables.runner import extract_exp_start
-from utils.variables.regexp import text_extractor_regexp_compile
+from utils.variables.regexp import text_extractor_regexp_compile, extract_exp_start
 
 
 def is_function(item):

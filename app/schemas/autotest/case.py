@@ -2,6 +2,7 @@ import traceback
 from typing import Optional, List
 from pydantic import Field
 
+from utils.logs.log import logger
 from ..base_form import BaseForm, PaginationForm, AddCaseDataForm, VariablesModel, SkipIfModel, \
     HeaderModel, ChangeSortForm
 from ...models.autotest.model_factory import ApiProject as Project, ApiProjectEnv as ProjectEnv, \
@@ -157,7 +158,7 @@ class RunCaseForm(BaseForm):
             try:
                 all_func_name = await Script.get_func_by_script_id(project_script_list)
             except:
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 raise ValueError('自定义函数导入错误，请检查脚本和语法')
             self.validate_func(all_func_name, content=self.dumps(variables))  # 校验引用的自定义函数
 

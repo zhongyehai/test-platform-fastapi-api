@@ -2,8 +2,6 @@ import copy
 import types
 import importlib
 
-from loguru import logger
-
 from app.models.autotest.model_factory import ApiProject, ApiProjectEnv, ApiCaseSuite, ApiCase, ApiStep, ApiMsg, \
     ApiReport, ApiReportCase, ApiReportStep, UiProject, UiProjectEnv, UiElement, UiCaseSuite, UiCase, UiStep, UiReport, \
     UiReportCase, UiReportStep, AppProject, AppProjectEnv, AppElement, AppCaseSuite, AppCase, AppStep, AppReport, \
@@ -20,7 +18,7 @@ from utils.client.test_runner.utils import build_url
 from utils.client.parse_model import ProjectModel, ApiModel, CaseModel, ElementModel
 from utils.message.send_report import send_report, call_back_for_pipeline
 from utils.client.test_runner import validate_func
-
+from utils.logs.log import logger
 
 class RunTestRunner:
 

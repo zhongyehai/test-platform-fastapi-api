@@ -6,6 +6,7 @@ import json
 import httpx
 from fastapi import Request, Depends
 
+from utils.logs.log import logger
 from ...schemas.system import job as schema
 from ...schemas.enums import ReceiveTypeEnum, DataStatusEnum
 from ...models.assist.hits import Hits
@@ -216,7 +217,7 @@ class JobFuncs:
                 data_hit = await ApiReport.execute_sql(
                     f"""SELECT project_id,hit_type,count(hit_type)  FROM auto_test_hits 
                            WHERE project_id in ({project.id}) AND {count_day} GROUP BY hit_type """)
-                print(data_report)
+                # logger.info(data_report)
                 pass_count = int(data_report[0]["pass"]) if data_report[0]["pass"] else 0
                 fail_count = int(data_report[0]["fail"]) if data_report[0]["fail"] else 0
                 total = pass_count + fail_count

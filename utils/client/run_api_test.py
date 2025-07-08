@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from loguru import logger
-
 from app.models.autotest.model_factory import ApiCaseSuite as CaseSuite, ApiMsg as Api, ApiStep as Step,\
     ApiReportCase as ReportCase, ApiReportStep as reportStep
 from app.models.assist.model_factory import Script
@@ -8,7 +6,7 @@ from app.models.config.model_factory import Config
 from app.schemas.enums import DataStatusEnum
 from utils.client.parse_model import StepModel, FormatModel
 from utils.client.run_test_runner import RunTestRunner
-
+from utils.logs.log import logger
 
 class RunApi(RunTestRunner):
     """ 接口调试 """
