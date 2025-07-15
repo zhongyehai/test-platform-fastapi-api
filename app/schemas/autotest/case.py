@@ -5,8 +5,6 @@ from pydantic import Field
 from utils.logs.log import logger
 from ..base_form import BaseForm, PaginationForm, AddCaseDataForm, VariablesModel, SkipIfModel, \
     HeaderModel, ChangeSortForm
-from ...models.autotest.model_factory import ApiProject as Project, ApiProjectEnv as ProjectEnv, \
-    ApiCaseSuite as CaseSuite, ApiCase as Case
 from app.models.assist.script import Script
 from app.schemas.enums import CaseStatusEnum
 
@@ -132,7 +130,7 @@ class RunCaseForm(BaseForm):
     phone_id: Optional[int] = Field(title="执行手机（app自动化必传）")
     no_reset: Optional[bool] = Field(default=False, title="是否不重置手机（app自动化必传）")
 
-    async def validate_request(self, *args, **kwargs):
+    async def validate_request(self, project_model, project_env_model, case_suite_model, case_model, *args, **kwargs):
 
         # TODO 优化校验位置到 services
         # 公共变量参数的校验
@@ -149,9 +147,9 @@ class RunCaseForm(BaseForm):
                 self.validate_header_format(headers)  # 校验格式
 
             # 2、校验数据引用是否合法
-            case = await Case.filter(id=self.id_list[0]).first().values("suite_id", "variables")
-            suite = await CaseSuite.filter(id=case["suite_id"]).first().values("project_id")
-            project = await Project.filter(id=suite["project_id"]).first()
+            case = await case_model.filter(id=self.id_list[0]).first().values("suite_id", "variables")
+            suite = await case_suite_model.filter(id=case["suite_id"]).first().values("project_id")
+            project = await project_model.filter(id=suite["project_id"]).first()
 
             # 自定义函数
             project_script_list = project.script_list
@@ -163,7 +161,7 @@ class RunCaseForm(BaseForm):
             self.validate_func(all_func_name, content=self.dumps(variables))  # 校验引用的自定义函数
 
             # 变量
-            env = await ProjectEnv.filter(project_id=project.id).first()
+            env = await project_env_model.filter(project_id=project.id).first()
             env_variables = env.variables
             env_variables.extend(case["variables"])
             all_variables = {

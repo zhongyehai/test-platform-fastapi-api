@@ -196,17 +196,17 @@ async def delete_case(request: Request, form: schema.DeleteCaseForm):
 
 
 async def run_case(request: Request, form: schema.RunCaseForm, background_tasks: BackgroundTasks):
-    case_runner, project_model, suite_model, case_model, step_model, report_model = RunApiCase, ApiProject, ApiCaseSuite, ApiCase, ApiStep, ApiReport
+    case_runner, project_model, project_env_model, suite_model, case_model, step_model, report_model = RunApiCase, ApiProject, ApiProjectEnv, ApiCaseSuite, ApiCase, ApiStep, ApiReport
     if request.app.test_type == "app":
-        case_runner, project_model, suite_model, case_model, step_model, report_model = RunUiCase, AppProject, AppCaseSuite, AppCase, AppStep, AppReport
+        case_runner, project_model, project_env_model, suite_model, case_model, step_model, report_model = RunUiCase, AppProject, AppProjectEnv, AppCaseSuite, AppCase, AppStep, AppReport
     elif request.app.test_type == "ui":
-        case_runner, project_model, suite_model, case_model, step_model, report_model = RunUiCase, UiProject, UiCaseSuite, UiCase, UiStep, UiReport
+        case_runner, project_model, project_env_model, suite_model, case_model, step_model, report_model = RunUiCase, UiProject, UiProjectEnv, UiCaseSuite, UiCase, UiStep, UiReport
 
     case_id_list = [data["id"] for data in await case_model.filter(id__in=form.id_list).all().values("id")]
     if not case_id_list or len(case_id_list) == 0:
         raise ValueError(f'用例不存在')
 
-    await form.validate_request()
+    await form.validate_request(project_model, project_env_model, suite_model, case_model)
     first_case = await case_model.filter(id=case_id_list[0]).first().values("suite_id", "name")
     suite = await suite_model.filter(id=first_case["suite_id"]).first().values("project_id")
     user_id = await User.get_run_user_id(request)
