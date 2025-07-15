@@ -65,7 +65,7 @@ scheduler = AsyncIOScheduler()
 
 async def request_run_task_api(task_code, task_type, skip_holiday=True):
     """ 调执行任务接口 """
-    logger.info(f'{"*" * 20} 开始触发执行定时任务 {"*" * 20}')
+    logger.info(f'{"*" * 20} 开始触发执行定时任务【{task_code}】 {"*" * 20}')
 
     # 判断是否设置了跳过节假日、调休日
     if skip_holiday:

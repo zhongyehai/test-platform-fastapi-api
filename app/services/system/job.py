@@ -59,12 +59,12 @@ class JobFuncs:
     async def cron_clear_report_detail(cls):
         """
         {
-            "name": "清理30天前的报告详细数据（不包含被 '自动化问题记录' 的报告）",
+            "name": "清理15天前的报告详细数据（不包含被 '自动化问题记录' 的报告）",
             "id": "cron_clear_report_detail",
             "cron": "0 35 2 * * ?"
         }
         """
-        time_point = (datetime.datetime.now() - datetime.timedelta(days=30))
+        time_point = (datetime.datetime.now() - datetime.timedelta(days=15))
 
         # 清理api测试报告数据
         hits_report_id = await Hits.filter(test_type='api').all().values("report_id")

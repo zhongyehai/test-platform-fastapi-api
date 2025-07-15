@@ -8,7 +8,8 @@ class BaseReportCase(BaseModel):
     """ 用例执行记录基类表 """
 
     name = fields.CharField(128, description="测试用例名称")
-    case_id = fields.IntField(null=True, index=True, default=0, description="执行记录对应的用例id, 如果是运行接口，则为null")
+    case_id = fields.IntField(null=True, index=True, default=0,
+                              description="执行记录对应的用例id, 如果是运行接口，则为null")
     suite_id = fields.IntField(null=True, index=True, default=0, description="执行用例所在的用例集id")
     report_id = fields.IntField(index=True, description="测试报告id")
     result = fields.CharField(
@@ -65,19 +66,13 @@ class BaseReportCase(BaseModel):
     @classmethod
     async def get_resport_case_list(cls, report_id, suite_id=None, get_detail=False):
         """ 根据报告id，获取用例列表，性能考虑，只查关键字段 """
-        # field_list = ["id", "case_id", "name", "result"]
-        # if get_summary is True:
-        #     field_list.extend(["summary", "case_data", "error_msg"])
-        # return await cls.filter(report_id=report_id).values(*field_list)
+        query_fields = ["id", "case_id", "suite_id", "name", "result"]  # 执行进度展示
+        if get_detail:
+            query_fields.extend(["summary"])  # 报告展示
+            # query_fields.extend(["summary", "case_data", "error_msg"])  # 报告展示
 
-        query_fields = ["id", "case_id", "suite_id", "name", "result"]
-        if get_detail is True:
-            query_fields.extend(["summary", "case_data", "error_msg"])
-
-        if suite_id:
-            return await cls.filter(report_id=report_id, suite_id=suite_id).values(*query_fields)  # 报告展示，根据用例集id查
-        else:  # 执行进度展示，根据报告id查
-            return await cls.filter(report_id=report_id).values(*query_fields)
+        filter_dict = {"report_id": report_id, "suite_id": suite_id} if suite_id else {"report_id": report_id}
+        return await cls.filter(**filter_dict).values(*query_fields)  # 报告展示，根据用例集id查
 
     @classmethod
     async def get_resport_suite_list(cls, report_id, case_suite_model):
@@ -96,21 +91,19 @@ class BaseReportCase(BaseModel):
 
         # 把数据解析成固定格式
         # [{'id': 2, 'name': '单接口用例集', 'result': ['fail', 'success']}, {'id': 3, 'name': '流程用例集', 'result': ['fail']}]
-        suite_list, tmep_suite_status = [], {"id": None, "name": None, "result": [], "children": []}
-        for record in query_res:  # [(2, 'fail', '单接口用例集'), (2, 'success', '单接口用例集'), (3, 'fail', '流程用例集')]
-            if tmep_suite_status["id"] == record.suite_id:
-                tmep_suite_status["result"].append(record.result)
-            else:
-                if tmep_suite_status["id"]:
-                    suite_list.append(copy.deepcopy(tmep_suite_status))
-                # 把当前这条数据更新到 tmep_suite_status
-                tmep_suite_status = {"id": record.suite_id, "name": record.name, "result": [record.result],
-                                     "children": []}
-        else:
-            if tmep_suite_status["id"]:
-                suite_list.append(copy.deepcopy(tmep_suite_status))
+        suite_dict = {}
+        for report_case in query_res:
+            if report_case.suite_id not in suite_dict:
+                suite_dict[report_case.suite_id] = {
+                    "id": report_case.suite_id,
+                    "name": report_case.name,
+                    "result": [report_case.result],
+                    "children": []
+                }
+                continue
+            suite_dict[report_case.suite_id]["result"].append(report_case.result)
 
-        def parse_suite_item(suite_item):
+        def parse_suite_result(suite_item):
             """ 判断用例集状态，并加入到最终结果 """
             if "error" in suite_item["result"]:
                 suite_item["result"] = "error"
@@ -126,7 +119,7 @@ class BaseReportCase(BaseModel):
                 suite_item["result"] = "wait"
             return suite_item
 
-        return [parse_suite_item(suite_item) for suite_item in suite_list]
+        return [parse_suite_result(suite_item) for suite_item in suite_dict.values()]
 
     @classmethod
     async def get_resport_suite_and_case_list(cls, report_id, suite_model, report_step_model):
@@ -134,14 +127,14 @@ class BaseReportCase(BaseModel):
         # 报告可能是用例，可能是接口
         suite_list = await cls.get_resport_suite_list(report_id, suite_model)
         resport_case_list = await cls.get_resport_case_list(report_id, get_detail=True)
-        resport_step_list = await report_step_model.get_resport_step_list_by_report(report_id)
-        if not suite_list and len(resport_case_list) == 1 and len(resport_step_list) == 1:  # 接口，没有用例集归属，需要手动生成
+        if not suite_list:  # 跑的是接口，没有用例集归属，需要手动生成
             suite_list = [{
                 "id": resport_case_list[0]["suite_id"],
                 "name": resport_case_list[0]["name"],
                 "result": resport_case_list[0]["result"],
                 "children": []
             }]
+        resport_step_list = await report_step_model.get_resport_step_list_by_report(report_id)
         for suite_item in suite_list:
             for resport_case_index, resport_case_item in enumerate(resport_case_list):
                 if resport_case_item["suite_id"] == suite_item["id"]:

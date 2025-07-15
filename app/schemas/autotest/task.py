@@ -36,11 +36,14 @@ class AddTaskForm(BaseForm):
     email_server: Optional[str] = Field(title="发件邮箱服务器")
     email_to: List[int] = Field(title="收件人邮箱")
     email_from: Optional[int] = Field(title="发件人邮箱")
+    merge_notify: Optional[int] = Field(
+        0, title="多个环境时，是否合并通知（只通知一次）", description="默认不合并，0不合并、1合并")
     cron: str = Field(..., title="cron表达式")
     skip_holiday: int = Field(1, title="是否跳过节假日、调休日")
     conf: Optional[dict] = Field({}, title="运行配置", description="ui存浏览器，app存运行服务器、手机、是否重置APP")
     is_async: int = Field(default=0, title="任务的运行机制", description="0：串行，1：并行，默认0")
     call_back: Optional[Union[list, dict]] = Field(title="回调给流水线")
+    push_hit: int = Field(title="任务不通过时，是否自动记录问题", description="任务不通过时，是否自动记录，0：不记录，1：记录，默认1")
 
     def validate_is_send(self):
         """ 发送报告类型 """

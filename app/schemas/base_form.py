@@ -42,7 +42,7 @@ class ExtractModel(HeaderModel):
     status: Union[int, None] = None
     data_source: Union[str, None] = None
     extract_type: Union[str, None] = None
-    update_to_header: Optional[Union[str, bool, int, None]] = None
+    update_to_header: Optional[Union[bool, int, None]] = None
 
 
 class ValidateModel(HeaderModel):
