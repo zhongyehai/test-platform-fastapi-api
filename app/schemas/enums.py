@@ -82,6 +82,13 @@ class WebHookTypeEnum(str, Enum):
     FEI_SHU = "fei_shu"  # 飞书
 
 
+class ReportStepStatusEnum(str, Enum):
+    """ report_step 状态 """
+    RESUME = "resume"  # 放行
+    PAUSE = "pause"   # 暂停
+    STOP = "stop"  # 中断
+
+
 class SendReportTypeEnum(str, Enum):
     """ 发送报告方式 """
     NOT_SEND = "not_send"  # 不发送

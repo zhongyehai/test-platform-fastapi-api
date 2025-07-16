@@ -1,8 +1,8 @@
 from typing import Optional
 from pydantic import Field
-from tortoise.expressions import RawSQL
 
 from ..base_form import BaseForm, PaginationForm, ChangeSortForm
+from ..enums import ReportStepStatusEnum
 
 
 class FindReportForm(PaginationForm):
@@ -97,4 +97,4 @@ class ChangeReportStepStatus(BaseForm):
         None, title="报告id", description="只传report_id，则代表是对整个测试报告的所有步骤进行操作")
     report_case_id: Optional[int] = Field(None, title="报告用例id")
     report_step_id: Optional[int] = Field(None, title="报告步骤id")
-    status: str = Field(..., title="状态", description="stop、pause、resume")
+    status: str = Field(ReportStepStatusEnum.RESUME, title="状态", description="stop、pause、resume")

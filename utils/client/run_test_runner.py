@@ -8,7 +8,7 @@ from app.models.autotest.model_factory import ApiProject, ApiProjectEnv, ApiCase
     AppReportCase, AppReportStep
 from app.models.assist.hits import Hits
 from app.models.config.webhook import WebHook
-from app.schemas.enums import TriggerTypeEnum, ReceiveTypeEnum
+from app.schemas.enums import TriggerTypeEnum, ReceiveTypeEnum, ReportStepStatusEnum
 from app.models.system.user import User
 from app.models.config.model_factory import RunEnv
 from app.models.assist.model_factory import Script
@@ -288,11 +288,13 @@ class RunTestRunner:
 
     async def send_report_if_task(self, notify_list):
         """ 发送测试报告 """
-        if self.task_dict:
+        # 非任务 或者 触发方式为页面 或者 状态为中断，均不发通知
+        if self.task_dict and self.report.trigger_type != TriggerTypeEnum.PAGE:
             await self.call_back_to_pipeline(notify_list)  # 回调流水线
 
-            # 发送测试报告
-            logger.info(f'开始发送测试报告')
+            # 中断测试的不发送通知
+            if await self.report_step_model.filter(report_id=self.report.id, status=ReportStepStatusEnum.STOP).first().values("id"):
+                return
 
             if self.task_dict["receive_type"] == ReceiveTypeEnum.EMAIL:  # 邮件
                 email_server = await Config.filter(name=self.task_dict["email_server"]).first().values("value")

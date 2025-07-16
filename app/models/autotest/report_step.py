@@ -2,6 +2,7 @@
 import time
 
 from ..base_model import BaseModel, fields, pydantic_model_creator
+from ...schemas.enums import ReportStepStatusEnum
 
 
 class BaseReportStep(BaseModel):
@@ -13,7 +14,7 @@ class BaseReportStep(BaseModel):
     element_id = fields.IntField(description="步骤对应的元素/接口id")
     report_case_id = fields.IntField(index=True, description="用例数据id")
     report_id = fields.IntField(index=True, description="测试报告id")
-    status = fields.CharField(8, default="resume", description="resume:放行、pause:暂停、stop:中断")
+    status = fields.CharField(8, default=ReportStepStatusEnum.RESUME, description="resume:放行、pause:暂停、stop:中断")
     process = fields.CharField(
         16, default='waite',
         description="步骤执行进度，waite：等待解析、parse: 解析数据、before：前置条件、after：后置条件、run：执行测试、extract：数据提取、validate：断言")
@@ -70,7 +71,7 @@ class BaseReportStep(BaseModel):
         return await cls.filter(report_id=report_id).values(*query_fields)
 
     @classmethod
-    async def update_status(cls, report_id=None, report_case_id=None, report_step_id=None, status="resume"):
+    async def update_status(cls, report_id=None, report_case_id=None, report_step_id=None, status=ReportStepStatusEnum.RESUME):
         """ 修改步骤的执行状态, stop、pause、resume """
         if report_id and report_case_id is None and report_step_id is None:  # 更新整个测试报告的数据
             await cls.filter(report_id=report_id).update(status=status)
