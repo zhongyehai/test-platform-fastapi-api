@@ -1,4 +1,5 @@
 import copy
+import traceback
 from unittest.case import SkipTest
 
 from . import exceptions, response, extract # , logger
@@ -352,7 +353,6 @@ class Runner:
         self.meta_datas = None
         self.redirect_print = RedirectPrintLogToMemory()  # 重定向自定义函数的打印到内存中
         try:
-            # TODO app/ui启动应用会占用时间，放到另一个线程启动
             self.init_client_session()  # 执行步骤前判断有没有初始化client_session
         except Exception as error:
             # ui
@@ -368,6 +368,10 @@ class Runner:
             elif "'app' option is required for reinstall" in str(error):
                 # Message: An unknown server-side error occurred while processing the command. Original error: 'app' option is required for reinstall
                 self.client_init_error = "启动app失败，请检查 app是否安装、包名是否正确"
+            else:
+                # TODO 更多异常捕获
+                self.client_init_error = str(error)
+                logger.error(traceback.format_exc())
 
         self.report_step = await report_step_model.get_resport_step_with_status(step_dict.get("report_step_id"), self.pause_step_time_out)
         if self.report_step.status == "stop": # 停止测试

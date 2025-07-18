@@ -17,26 +17,26 @@ job = FastAPI(
 )
 job.title = 'job服务'
 
-# 注册钩子函数
 register_tortoise(
     job,
     config=tortoise_orm_conf,
     add_exception_handlers=True
 )
 
-
-class GetJobForm(BaseModel):
-    """ 获取job信息 """
-    task_code: str = Field(..., title="job code")
-
 @job.on_event('startup')
 async def init_scheduler_job():
     """ 初始化定时任务 """
     await Tortoise.init(tortoise_orm_conf, timezone="Asia/Shanghai")  # 数据库链接
-    await Tortoise.generate_schemas()
+    # await Tortoise.generate_schemas(safe=True)
 
     task_list = await Tortoise.get_connection("default").execute_query_dict("SELECT `task_code`, cron  FROM apscheduler_jobs")  # 数据库中的所有任务
     await scheduler.init_scheduler(task_list)
+    logger.info(f'\n\n\n{"*" * 20} 服务【{job.title}】启动完成 {"*" * 20}\n\n\n'"")
+
+
+class GetJobForm(BaseModel):
+    """ 获取job信息 """
+    task_code: str = Field(..., title="job code")
 
 
 @job.post("/api/job", summary="添加定时任务")

@@ -121,7 +121,7 @@ class EditCaseForm(GetCaseForm):
 class RunCaseForm(BaseForm):
     """ 运行用例 """
     id_list: List[int] = Field(..., title="用例id list")
-    env_list: List[str] = Field(..., title="运行环境code")
+    env_list: List[str] = Field(..., title="运行环境code", min_length=1)
     temp_variables: Optional[dict] = Field(title="临时指定参数")
     is_async: int = Field(default=0, title="执行模式", description="0：用例维度串行执行，1：用例维度并行执行")
     tigger_type: Optional[str] = Field(default=0, title="触发类型")
