@@ -7,11 +7,11 @@ from config import api_suite_list, ui_suite_list
 class BaseCaseSuite(BaseModel):
     """ 用例集基类表 """
     name = fields.CharField(255, default="", description="用例集名称")
-    num = fields.IntField(null=True, default=None, description="用例集在对应服务下的序号")
+    num = fields.IntField(null=True, description="用例集在对应服务下的序号")
     suite_type = fields.CharEnumField(
         ApiCaseSuiteTypeEnum, default=ApiCaseSuiteTypeEnum.BASE,
         description="用例集类型，base: 基础用例集，api: 单接口用例集，process: 流程用例集，assist: 造数据用例集")
-    parent = fields.IntField(null=True, default=None, description="父级用例集id")
+    parent = fields.IntField(null=True, description="父级用例集id")
     project_id = fields.IntField(index=True, description="所属的服务id")
 
     class Meta:

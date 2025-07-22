@@ -1,9 +1,12 @@
 from fastapi import Request, BackgroundTasks, Depends
 
-from app.schemas.enums import ApiCaseSuiteTypeEnum
+from app.schemas.enums import ApiCaseSuiteTypeEnum, ReceiveTypeEnum
+from utils.message.send_report import send_report
 from ...models.autotest.model_factory import ApiReport, ApiReportCase, ApiReportStep, AppReport, AppReportCase, \
     AppReportStep, UiReport, UiReportCase, UiReportStep, ApiMsg, ApiCase, ApiStep, ApiCaseSuite, \
-    AppCaseSuite, UiCaseSuite
+    AppCaseSuite, UiCaseSuite, ApiTask, AppTask, UiTask
+from ...models.config.model_factory import Config, WebHook
+from ...models.system.model_factory import User
 from ...schemas.autotest import reprot as schema
 from utils.util.file_util import FileUtil
 
@@ -14,7 +17,7 @@ async def get_report_list(request: Request, form: schema.FindReportForm = Depend
     if form.detail:
         get_filed.extend([
             "create_time", "trigger_type", "env", "is_passed", "process", "status", "create_user", "project_id",
-            "trigger_id", "run_type"
+            "trigger_id", "run_type", "notified"
         ])
 
     query_data = await form.make_pagination(model, get_filed=get_filed)
@@ -40,6 +43,41 @@ async def save_report_as_case(request: Request, form: schema.GetReportForm = Dep
         **dict(api)
     }, request.state.user)
     return request.app.post_success()
+
+
+async def notify_report(request: Request, form: schema.GetReportForm):
+    front_host = await Config.get_report_host()
+    report_model, task_model, report_addr = ApiReport, ApiTask, f'{front_host}{await Config.get_api_report_addr()}'
+    if request.app.test_type == "app":
+        report_model, task_model, report_addr = AppReport, AppTask, f'{front_host}{await Config.get_app_ui_report_addr()}'
+    elif request.app.test_type == "ui":
+        report_model, task_model, report_addr = UiReport, UiTask, f'{front_host}{await Config.get_web_ui_report_addr()}'
+
+    report = await report_model.filter(id=form.id, run_type='task', notified=False).first()
+    if report:
+        task_dict = dict(await task_model.filter(id=report.trigger_id[0]).first())
+        if task_dict["receive_type"] == ReceiveTypeEnum.EMAIL:  # 邮件
+            email_server = await Config.filter(name=task_dict["email_server"]).first().values("value")
+            task_dict["email_server"] = email_server["value"]
+            email_from = await User.filter(id=task_dict["email_from"]).first().values("email", "email_password")
+            task_dict["email_from"], task_dict["email_pwd"] = email_from["email"], email_from[
+                "email_password"]
+            email_to = await User.filter(id__in=task_dict["email_to"]).all().values("email")
+            task_dict["email_to"] = [email["email"] for email in email_to]
+        else:  # 解析并组装webhook地址并加签
+            task_dict["webhook_list"] = await WebHook.get_webhook_list(
+                task_dict["receive_type"], task_dict["webhook_list"])
+
+        res = await send_report(
+            content_list=[{"report_id": report.id, "report_summary": report.summary}],
+            **task_dict,
+            report_addr=report_addr
+        )
+        if res is True:
+            await report_model.filter(id=form.id).update(notified=True)
+            return request.app.success("触发通知成功")
+        return request.app.fail("通知失败，请检查数据")
+    return request.app.fail("当前报告不符合触发通知条件")
 
 
 async def get_report_suite_list(request: Request, form: schema.GetReportCaseSuiteListForm = Depends()):

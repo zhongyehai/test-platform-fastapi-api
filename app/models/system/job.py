@@ -18,7 +18,7 @@ class JobRunLog(BaseModel):
 
     func_name = fields.CharField(255, description="执行方法")
     status = fields.IntField(default=1, description="执行状态：0失败、1执行中、2执行成功")
-    business_id = fields.IntField(default=None, description="业务线id")
+    business_id = fields.IntField(null=True, description="业务线id")
     detail = fields.JSONField(default={}, description="执行结果数据")
 
     class Meta:

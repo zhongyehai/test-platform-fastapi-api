@@ -9,12 +9,13 @@ class BaseReportStep(BaseModel):
     """ 步骤执行记录基类表 """
 
     name = fields.CharField(128, description="测试步骤名称")
-    case_id = fields.IntField(null=True, index=True, default=None, description="步骤所在的用例id")  # 如果是运行的接口，没有用例id
-    step_id = fields.IntField(null=True, index=True, default=None, description="步骤id")  # 如果是运行的接口，没有步骤id
+    case_id = fields.IntField(index=True, null=True, description="步骤所在的用例id")  # 如果是运行的接口，没有用例id
+    step_id = fields.IntField(index=True, null=True, description="步骤id")  # 如果是运行的接口，没有步骤id
     element_id = fields.IntField(description="步骤对应的元素/接口id")
     report_case_id = fields.IntField(index=True, description="用例数据id")
     report_id = fields.IntField(index=True, description="测试报告id")
-    status = fields.CharField(8, default=ReportStepStatusEnum.RESUME, description="resume:放行、pause:暂停、stop:中断")
+    status = fields.CharEnumField(
+        ReportStepStatusEnum, default=ReportStepStatusEnum.RESUME, description="resume:放行、pause:暂停、stop:中断")
     process = fields.CharField(
         16, default='waite',
         description="步骤执行进度，waite：等待解析、parse: 解析数据、before：前置条件、after：后置条件、run：执行测试、extract：数据提取、validate：断言")

@@ -8,8 +8,8 @@ class BaseCase(BaseModel):
     """ 用例基类表 """
 
     name = fields.CharField(255, default="", description="用例名称")
-    num = fields.IntField(null=True, default=None, description="用例序号")
-    desc = fields.TextField(default=None, description="用例描述")
+    num = fields.IntField(null=True, description="用例序号")
+    desc = fields.TextField(null=True, description="用例描述")
     status = fields.IntField(
         default=CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value,
         description="用例状态，0未调试-不执行，1调试通过-要执行，2调试通过-不执行，3调试不通过-不执行，默认未调试-不执行")

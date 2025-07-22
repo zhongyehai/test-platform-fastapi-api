@@ -44,7 +44,7 @@ class BaseProject(BaseModel):
 class ApiProject(BaseProject):
     """ 服务表 """
 
-    swagger = fields.CharField(255, null=True, default=None, description="服务对应的swagger地址")
+    swagger = fields.CharField(255, null=True, description="服务对应的swagger地址")
     last_pull_status = fields.IntField(
         null=True, default=1, description="最近一次swagger拉取状态，0拉取失败，1未拉取，2拉取成功")
 

@@ -6,10 +6,10 @@ from app.schemas.enums import ApiLevelEnum, ApiMethodEnum, DataStatusEnum, ApiBo
 class BaseApi(BaseModel):
     """ 页面表 """
     name = fields.CharField(255, default="", description="接口名称")
-    num = fields.IntField(null=True, default=None, description="接口序号")
+    num = fields.IntField(null=True, description="接口序号")
     desc = fields.CharField(255, default="", description="接口描述")
-    project_id = fields.IntField(null=True, index=True, default=None, description="所属的服务id")
-    module_id = fields.IntField(null=True, index=True, default=None, description="所属的模块id")
+    project_id = fields.IntField(null=True, index=True, description="所属的服务id")
+    module_id = fields.IntField(null=True, index=True, description="所属的模块id")
 
     class Meta:
         abstract = True  # 不生成表
@@ -30,7 +30,7 @@ class ApiMsg(BaseApi):
         default=[{"data_type": None, "key": None, "remark": None, "value": None}], description="form-data参数")
     data_urlencoded = fields.JSONField(default={}, description="form_urlencoded参数")
     data_json = fields.JSONField(default={}, description="json参数")
-    data_text = fields.TextField(null=True, default=None, description="文本参数")
+    data_text = fields.TextField(null=True, description="文本参数")
     response = fields.JSONField(default={}, description="响应对象")
     extracts = fields.JSONField(
         default=[

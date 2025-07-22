@@ -6,7 +6,7 @@ class FuncErrorRecord(BaseModel):
     """ 自定义函数执行错误记录表 """
 
     name = fields.CharField(255, null=True, description="错误title")
-    detail = fields.TextField(null=True, default="", description="错误详情")
+    detail = fields.TextField(null=True, default=None, description="错误详情")
 
     class Meta:
         table = "func_error_record"

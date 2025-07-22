@@ -23,8 +23,8 @@ class BaseTask(BaseModel):
     receive_type = fields.CharEnumField(
         ReceiveTypeEnum, default=ReceiveTypeEnum.DING_DING, description="接收测试报告类型: ding_ding、we_chat、email")
     webhook_list = fields.JSONField(default=[], description="机器人地址")
-    email_server = fields.CharField(255, null=True, default=None, description="发件邮箱服务器")
-    email_from = fields.IntField(null=True, default=None, description="发件人邮箱")
+    email_server = fields.CharField(255, null=True, description="发件邮箱服务器")
+    email_from = fields.IntField(null=True, description="发件人邮箱")
     email_to = fields.JSONField(default=[], description="收件人邮箱")
     skip_holiday = fields.IntField(default=1, description="是否跳过节假日、调休日")
     status = fields.CharEnumField(

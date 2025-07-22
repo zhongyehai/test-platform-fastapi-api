@@ -9,8 +9,8 @@ class BaseModel(models.Model, JsonUtil):
     id = fields.IntField(pk=True)
     create_time = fields.DatetimeField(auto_now_add=True, description="创建时间")
     update_time = fields.DatetimeField(auto_now=True, description="最后修改时间")
-    create_user = fields.IntField(unll=True, default=1, description="创建人")
-    update_user = fields.IntField(unll=True, default=1, description="最后修改人")
+    create_user = fields.IntField(null=True, default=1, description="创建人")
+    update_user = fields.IntField(null=True, default=1, description="最后修改人")
 
     class Meta:
         abstract = True  # 不生成表
@@ -188,7 +188,7 @@ class NumFiled(BaseModel):
     class Meta:
         abstract = True  # 不生成表
 
-    num = fields.IntField(unll=True, default=0, null=True, comment="数据序号")
+    num = fields.IntField(default=0, null=True, comment="数据序号")
 
 
 class SaveRequestLog(BaseModel):

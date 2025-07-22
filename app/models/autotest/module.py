@@ -6,8 +6,8 @@ class BaseModule(BaseModel):
     """ 模块基类表 """
 
     name = fields.CharField(255, default="", description="模块名")
-    num = fields.IntField(null=True, default=None, description="模块在对应服务下的序号")
-    parent = fields.IntField(null=True, default=None, description="父级模块id")
+    num = fields.IntField(null=True, description="模块在对应服务下的序号")
+    parent = fields.IntField(null=True, description="父级模块id")
     project_id = fields.IntField(index=True, description="所属的服务id")
 
     class Meta:
@@ -17,7 +17,7 @@ class BaseModule(BaseModel):
 class ApiModule(BaseModule):
     """ 模块表 """
 
-    controller = fields.CharField(255, null=True, default=None, description="当前模块在swagger上的controller名字")
+    controller = fields.CharField(255, null=True, description="当前模块在swagger上的controller名字")
 
     class Meta:
         table = "api_test_module"

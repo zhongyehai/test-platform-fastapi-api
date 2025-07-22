@@ -6,6 +6,7 @@ report_router = APIRouter()
 report_router.add_get_route("/list", service.get_report_list, summary="获取测试报告列表")
 report_router.add_get_route("/status", service.get_report_status, auth=False, summary="根据运行id获取当次报告是否全部生成")
 report_router.add_get_route("/show-id", service.get_report_show_id, auth=False, summary="根据运行id获取当次要打开的报告")
+report_router.add_post_route("/notify", service.notify_report, auth=True, summary="手动触发报告通知，仅限任务，且为未通知的")
 report_router.add_post_route(
     "/as-case", service.save_report_as_case, summary="保存报告中的接口为用例（仅报告运行类型为接口使用）")
 report_router.add_get_route("", service.get_report_detail, auth=False, summary="获取测试报告")

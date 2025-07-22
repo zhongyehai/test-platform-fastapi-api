@@ -8,7 +8,7 @@ class BugTrack(NumFiled):
     iteration = fields.CharField(128, default='', null=True, description="迭代")
     bug_from = fields.CharField(128, default='', description="缺陷来源")
     trigger_time = fields.CharField(128, default='', null=True, description="发现时间")
-    manager = fields.IntField(default=None, description="跟进负责人")
+    manager = fields.IntField(null=True, description="跟进负责人")
     reason = fields.CharField(128, default='', null=True, description="原因")
     solution = fields.CharField(128, default='', null=True, description="解决方案")
     status = fields.CharField(64, default='todo', description="bug状态，todo：待解决、doing：解决中、done：已解决")

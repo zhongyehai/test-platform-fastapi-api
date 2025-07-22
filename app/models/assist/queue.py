@@ -12,17 +12,17 @@ class QueueInstance(NumFiled):
     # 消息队列链接属性
     queue_type = fields.CharEnumField(QueueTypeEnum, default=QueueTypeEnum.ACTIVE_MQ, description="消息队列类型")
     instance_id = fields.CharField(128, default="test_platform_client", description="rocket_mq 对应的 instance_id")
-    desc = fields.CharField(512, null=True, default="", description="描述")
+    desc = fields.CharField(512, null=True, default=None, description="描述")
 
     # rabbit_mq
     host = fields.CharField(128, default="", description="rabbit_mq 地址")
-    port = fields.IntField(null=True, description="rabbit_mq 端口")
-    account = fields.CharField(128, null=True, default="", description="rabbit_mq 账号")
-    password = fields.CharField(128, null=True, default="", description="rabbit_mq 密码")
+    port = fields.IntField(null=True, default=None, description="rabbit_mq 端口")
+    account = fields.CharField(128, null=True, default=None, description="rabbit_mq 账号")
+    password = fields.CharField(128, null=True, default=None, description="rabbit_mq 密码")
 
     # rocket_mq
-    access_id = fields.CharField(128, null=True, default="", description="rocket_mq access_id")
-    access_key = fields.CharField(128, null=True, default="", description="rocket_mq access_key")
+    access_id = fields.CharField(128, null=True, default=None, description="rocket_mq access_id")
+    access_key = fields.CharField(128, null=True, default=None, description="rocket_mq access_key")
 
 
 class QueueTopic(NumFiled):
@@ -33,7 +33,7 @@ class QueueTopic(NumFiled):
 
     instance_id = fields.IntField(null=True, description="rocket_mq 实例数据id")
     topic = fields.CharField(128, default="", description="rocket_mq topic，rabbit_mq queue_name")
-    desc = fields.CharField(512, null=True, default="", description="描述")
+    desc = fields.CharField(512, null=True, default=None, description="描述")
 
 
 class QueueMsgLog(BaseModel):

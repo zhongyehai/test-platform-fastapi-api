@@ -25,6 +25,7 @@ class BaseReport(BaseModel):
     trigger_id = fields.JSONField(null=True, comment="运行id，用于触发重跑")
     project_id = fields.IntField(index=True, description="所属的服务id")
     summary = fields.JSONField(default={}, description="报告的统计")
+    notified = fields.BooleanField(default=False, description="标记是否已经通知过了")
 
     class Meta:
         abstract = True  # 不生成表

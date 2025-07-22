@@ -5,7 +5,7 @@ from ..base_model import fields, pydantic_model_creator, BaseModel
 
 class WeeklyConfigModel(BaseModel):
     name = fields.TextField(description="名字")
-    parent = fields.IntField(null=True, default=None, description="上一级的id，有上一级则为项目，否则为产品")
+    parent = fields.IntField(null=True, description="上一级的id，有上一级则为项目，否则为产品")
     desc = fields.TextField(description="备注")
 
     class Meta:

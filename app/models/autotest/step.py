@@ -24,7 +24,7 @@ class BaseStep(BaseModel):
         description="是否跳过的判断条件")
     skip_on_fail = fields.IntField(default=1, description="当用例有失败的步骤时，是否跳过此步骤，1跳过，0不跳过，默认跳过")
     data_driver = fields.JSONField(default=[], description="数据驱动，若此字段有值，则走数据驱动的解析")
-    quote_case = fields.IntField(null=True, default=None, description="引用用例的id")
+    quote_case = fields.IntField(null=True, description="引用用例的id")
     case_id = fields.IntField(index=True, description="步骤所在的用例的id")
 
     class Meta:
@@ -92,8 +92,8 @@ class ApiStep(BaseStep):
 
     pop_header_filed = fields.JSONField(default=[], description="头部参数中去除指定字段")
 
-    api_id = fields.IntField(null=True, default=None, description="步骤所引用的接口的id")
-    allow_redirect = fields.BooleanField(null=True, default=False, description="是否允许重定向")
+    api_id = fields.IntField(null=True, description="步骤所引用的接口的id")
+    allow_redirect = fields.BooleanField(default=False, description="是否允许重定向")
 
     class Meta:
         table = "api_test_step"

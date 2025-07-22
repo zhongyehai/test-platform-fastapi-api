@@ -9,7 +9,7 @@ class BaseElement(BaseApi):
     by = fields.CharField(255, null=True, description="定位方式")
     element = fields.TextField(default="", null=True, description="元素值")
     wait_time_out = fields.IntField(default=5, null=True, description="等待元素出现的时间，默认5秒")
-    page_id = fields.IntField(null=True, index=True, default=None, description="所属的页面id")
+    page_id = fields.IntField(null=True, index=True, description="所属的页面id")
 
     class Meta:
         abstract = True  # 不生成表
