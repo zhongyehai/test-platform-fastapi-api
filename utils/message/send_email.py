@@ -39,8 +39,10 @@ class SendEmail:
             service.sendmail(from_addr=self.username, to_addrs=self.to_list, msg=message.as_string())
             print(f'{"=" * 30} 邮件发送成功 {"=" * 30}')
             service.close()
+            return True
         except Exception as error:
             print(f'发送邮件出错，错误信息为：\n {error}')
+            return False
 
 if __name__ == '__main__':
     pass

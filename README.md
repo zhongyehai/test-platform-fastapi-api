@@ -83,6 +83,9 @@
 
 ### 博客地址：https://www.cnblogs.com/zhongyehai/
 
+### 微信群 
+![微信群](img/weixin/weixin.png)
+
 ## 项目关键截图
 
 #### 选择运行环境

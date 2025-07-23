@@ -100,18 +100,18 @@ class RunTestRunner:
         self.parsed_element_dict = {}
         self.run_env = None
 
-    async def get_report_addr(self):
-        """ 获取报告前端地址 """
-        report_host = await Config.get_report_host()
-        if self.run_type == "api":  # 接口自动化
-            report_addr = await Config.get_api_report_addr()
-            return f'{report_host}{report_addr}'
-        elif self.run_type == "ui":  # web-ui自动化
-            report_addr = await Config.get_web_ui_report_addr()
-            return f'{report_host}{report_addr}'
-        else:  # app-ui自动化
-            report_addr = await Config.get_app_ui_report_addr()
-            return f'{report_host}{report_addr}'
+    # async def get_report_addr(self):
+    #     """ 获取报告前端地址 """
+    #     report_host = await Config.get_report_host()
+    #     if self.run_type == "api":  # 接口自动化
+    #         report_addr = await Config.get_api_report_addr()
+    #         return f'{report_host}{report_addr}'
+    #     elif self.run_type == "ui":  # web-ui自动化
+    #         report_addr = await Config.get_web_ui_report_addr()
+    #         return f'{report_host}{report_addr}'
+    #     else:  # app-ui自动化
+    #         report_addr = await Config.get_app_ui_report_addr()
+    #         return f'{report_host}{report_addr}'
 
     async def get_format_project(self, project_id):
         """ 从已解析的服务字典中取指定id的服务，如果没有，则取出来解析后放进去 """
@@ -307,7 +307,9 @@ class RunTestRunner:
                 self.task_dict["webhook_list"] = await WebHook.get_webhook_list(
                     self.task_dict["receive_type"], self.task_dict["webhook_list"])
 
-            await send_report(content_list=notify_list, **self.task_dict, report_addr=self.front_report_addr)
+            res = await send_report(content_list=notify_list, **self.task_dict, report_addr=self.front_report_addr)
+            if res is True:
+                await self.report.model_update({"notified": True})
 
     async def call_back_to_pipeline(self, notify_list):
         """ 如果是流水线触发的，则回调给流水线 """

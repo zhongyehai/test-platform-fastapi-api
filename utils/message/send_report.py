@@ -21,8 +21,10 @@ async def send_msg(addr, msg):
         async with httpx.AsyncClient(verify=False) as client:
             response = await client.post(addr, json=msg, timeout=30)
             logger.info(f'发送消息，结果：{response.json()}')
+        return True
     except Exception as error:
         logger.info(f'向机器人发送测试报告失败，错误信息：\n{error}')
+        return False
 
 
 async def send_server_status(server_name, app_title=None, action_type="启动"):
@@ -53,13 +55,13 @@ async def send_inspection_by_msg(receive_type, content_list, kwargs):
     """ 发送巡检消息 """
     msg = inspection_ding_ding(content_list, kwargs) \
         if receive_type == ReceiveTypeEnum.DING_DING.value else inspection_we_chat(content_list, kwargs)
-    for webhook in kwargs["webhook_list"]:
-        await send_msg(webhook, msg)
+    res_list = [await send_msg(webhook, msg) for webhook in kwargs["webhook_list"]]
+    return False not in res_list
 
 
 def send_inspection_by_email(content_list, kwargs):
     """ 通过邮件发送测试报告 """
-    SendEmail(
+    return SendEmail(
         kwargs.get("email_server"),
         kwargs.get("email_from").strip(),
         kwargs.get("email_pwd"),
@@ -75,10 +77,11 @@ async def send_report(**kwargs):
     if is_send == SendReportTypeEnum.ALWAYS.value or (is_send == SendReportTypeEnum.ON_FAIL.value and "fail" in result):
         logger.info(f'开始发送测试报告')
         if receive_type == ReceiveTypeEnum.EMAIL.value:
-            Thread(target=send_inspection_by_email, args=[content_list, kwargs]).start()
+            return send_inspection_by_email(content_list, kwargs)
+            # Thread(target=send_inspection_by_email, args=[content_list, kwargs]).start()
         else:
-            await send_inspection_by_msg(receive_type, content_list, kwargs)
-
+            return await send_inspection_by_msg(receive_type, content_list, kwargs)
+    return True
 
 async def call_back_for_pipeline(task_id, call_back_info: list, extend: dict, status):
     """ 把测试结果回调给流水线 """

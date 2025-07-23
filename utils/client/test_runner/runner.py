@@ -384,7 +384,7 @@ class Runner:
             raise RuntimeError(self.client_init_error)
 
         try:
-            logger.info(f"""开始执行步骤: {step_dict.get("name")}""")
+            logger.info(f"""开始执行步骤: {self.report_step.report_id}.{self.report_step.report_case_id}.{self.report_step.id}.{step_dict.get("name")}""")
             await self._run_test(step_dict)
             self.client_session.meta_data["result"] = "success"
         except Exception as error:  # 捕获步骤运行中报错(报错、断言不通过、跳过测试)
