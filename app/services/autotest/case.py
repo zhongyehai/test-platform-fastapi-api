@@ -80,28 +80,31 @@ async def change_case_parent(request: Request, form: schema.ChangeCaseParentForm
     return request.app.put_success()
 
 
-async def copy_case(request: Request, form: schema.GetCaseForm):
+async def copy_case(request: Request, form: schema.DeleteCaseForm):
     case_model, step_model = ApiCase, ApiStep
     if request.app.test_type == "app":
         case_model, step_model = AppCase, AppStep
     elif request.app.test_type == "ui":
         case_model, step_model = UiCase, UiStep
 
-    case = await case_model.validate_is_exist("用例不存在", id=form.id)
+    for case_id in form.id_list:
+        case = await case_model.filter(id=case_id).first()
+        if not case:
+            continue
 
-    # 复制用例
-    old_case = dict(case)
-    # old_case["name"], old_case["status"] = old_case["name"] + "_copy", CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value
-    old_case["status"] = CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value
-    new_case = await case_model.model_create(old_case, request.state.user)
+        # 复制用例
+        old_case = dict(case)
+        # old_case["name"], old_case["status"] = old_case["name"] + "_copy", CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value
+        old_case["status"] = CaseStatusEnum.NOT_DEBUG_AND_NOT_RUN.value
+        new_case = await case_model.model_create(old_case, request.state.user)
 
-    # 复制步骤
-    old_step_list = await step_model.filter(case_id=case.id).order_by("num").all()
-    for index, old_step in enumerate(old_step_list):
-        step = dict(old_step)
-        step["case_id"] = new_case.id
-        await step_model.model_create(step, request.state.user)
-    return request.app.success("复制成功", data=new_case)
+        # 复制步骤
+        old_step_list = await step_model.filter(case_id=case.id).order_by("num").all()
+        for index, old_step in enumerate(old_step_list):
+            step = dict(old_step)
+            step["case_id"] = new_case.id
+            await step_model.model_create(step, request.state.user)
+    return request.app.success("复制成功", data=new_case if len(form.id_list) == 1 else None)
 
 
 async def case_from(request: Request, form: schema.GetCaseForm = Depends()):

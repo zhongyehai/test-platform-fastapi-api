@@ -51,7 +51,9 @@ def register_exception_handler(app):
             {'ctx': {'limit_value': 2}, 'loc': ('body', 'permission_id'), 'msg': 'ensure this value has at least 2 characters', 'type': 'value_error.any_str.min_length'}
         ]
         """
-        return request.app.fail(get_error_msg(exc))
+        error = exc.errors()[0]
+        app.logger.error(error)
+        return request.app.fail(get_error_msg(error))
 
     @app.exception_handler(ValidationError)
     async def filed_validate_error(request, exc):
@@ -101,10 +103,8 @@ def register_exception_handler(app):
             request.app.logger.error(traceback.format_exc())
 
 
-def get_error_msg(exc):
+def get_error_msg(error):
     # error_msg = exc.errors()
-    error = exc.errors()[0]
-    logger.error(error)
     filed_name = error["loc"][-1]
     error_type, msg = error["type"], error["msg"]
 

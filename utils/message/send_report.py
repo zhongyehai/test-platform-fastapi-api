@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
-from threading import Thread
+import json
 
 import httpx
 
 from app.models.config.model_factory import Config, WebHook
 from app.models.assist.model_factory import CallBack
-from app.schemas.enums import SendReportTypeEnum, ReceiveTypeEnum
+from app.schemas.enums import SendReportTypeEnum, ReceiveTypeEnum, WebHookTypeEnum
 from .send_email import SendEmail
 from .template import run_time_error_msg, call_back_webhook_msg, render_html_report, \
-    get_business_stage_count_msg, inspection_ding_ding, inspection_we_chat
+    get_business_stage_count_msg, inspection_ding_ding, inspection_we_chat, server_status_msg_ding_ding, \
+    server_status_msg_we_chat
 from ..logs.log import logger
 from config import _default_web_hook_type, _default_web_hook, _web_hook_secret
 
 
 async def send_msg(addr, msg):
     """ 发送消息 """
-    logger.info(f'发送消息，文本：{msg}')
+    logger.info(f'发送消息, 地址: {addr}, 文本: {json.dumps(msg, ensure_ascii=False)}')
     try:
         async with httpx.AsyncClient(verify=False) as client:
             response = await client.post(addr, json=msg, timeout=30)
@@ -29,14 +29,11 @@ async def send_msg(addr, msg):
 
 async def send_server_status(server_name, app_title=None, action_type="启动"):
     """ 服务启动/关闭成功 """
-    msg = {
-        "msgtype": "markdown",
-        "markdown": {
-            "title": f"服务{action_type}通知",
-            "text": f'### 服务{action_type}通知 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} \n> '
-                    f'#### 服务<font color=#FF0000>【{server_name}】【{app_title}】</font>{action_type}完成 \n> '
-        }
-    }
+    if _default_web_hook_type == WebHookTypeEnum.DING_DING.value:
+        msg = server_status_msg_ding_ding(action_type, server_name, app_title)
+    else:
+        msg = server_status_msg_we_chat(action_type, server_name, app_title)
+
     await send_msg(WebHook.build_webhook_addr(_default_web_hook_type, _default_web_hook, _web_hook_secret), msg)
 
 

@@ -4,14 +4,14 @@ from loguru import logger
 
 from utils.util.file_util import LOG_ADDRESS
 
-# job 的日志
-job_logger = logger.bind(name="job")
-job_logger.add(
-    Path(LOG_ADDRESS).joinpath("job.log"),
-    colorize=True,
-    enqueue=True,
-    filter=lambda record: record["extra"].get("name") == "job"
-)
+# # job 的日志
+# job_logger = logger.bind(name="job")
+# job_logger.add(
+#     Path(LOG_ADDRESS).joinpath("job.log"),
+#     colorize=True,
+#     enqueue=True,
+#     filter=lambda record: record["extra"].get("name") == "job"
+# )
 
 # main 的日志
 logger = logger.bind(name="main")

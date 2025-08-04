@@ -1,14 +1,25 @@
 """ apscheduler 默认的调度器存储对于异步支持有问题，这里自己实现存储，启动 """
 import datetime
 import json
+from pathlib import Path
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler as _AsyncIOScheduler
 from tortoise import Tortoise
+from loguru import logger as loguru_logger
 
 from config import main_server_host
 from utils.parse.parse_cron import parse_cron
-from utils.logs.log import job_logger as logger
+from utils.util.file_util import LOG_ADDRESS
+
+# job 的日志
+logger = loguru_logger.bind(name="job")
+logger.add(
+    Path(LOG_ADDRESS).joinpath("job.log"),
+    colorize=True,
+    enqueue=True,
+    filter=lambda record: record["extra"].get("name") == "job"
+)
 
 
 class AsyncIOScheduler(_AsyncIOScheduler):

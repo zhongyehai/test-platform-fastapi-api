@@ -109,7 +109,7 @@ class BaseProjectEnv(BaseModel):
         else:
             insert_env_data = {"env_id": env_id, "project_id": project_id}
         insert_env_data["create_user"] = insert_env_data["update_user"] = user_id
-        return await cls.create(**insert_env_data)
+        return await cls.model_create(insert_env_data)
 
     @classmethod
     async def create_env(cls, env_model, project_model, project_id=None, env_list=None):

@@ -29,7 +29,7 @@ def inspection_ding_ding(content_list, task_kwargs):
         if content_data["report_summary"]["stat"]["response_time"]["slow"] or content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
             notify_template["markdown"]["text"] += "#### 其中: "
             if content_data["report_summary"]["stat"]["response_time"]["slow"]:
-                notify_template += (
+                notify_template["markdown"]["text"] += (
                     f'<font color="#FF0000"> 有{len(content_data["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒 </font>, '
                 )
             if content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
@@ -66,7 +66,7 @@ def inspection_we_chat(content_list, task_kwargs):
         if content_data["report_summary"]["stat"]["response_time"]["slow"] or content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
             notify_template["markdown"]["content"] += "其中: "
             if content_data["report_summary"]["stat"]["response_time"]["slow"]:
-                notify_template += (
+                notify_template["markdown"]["content"] += (
                     f'<font color="warning"> 有{len(content_data["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒 </font>, '
                 )
             if content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
@@ -288,6 +288,28 @@ def get_business_stage_count_msg(content):
     if content["receiveType"] == "ding_ding":
         return business_stage_count_ding_ding(content)
     return business_stage_count_we_chat(content)
+
+
+def server_status_msg_ding_ding(action_type, server_name, app_title):
+    """ 服务状态通知 """
+    return {
+            "msgtype": "markdown",
+            "markdown": {
+                "title": f"服务<font color=#FF0000>【{action_type}】</font>通知",
+                "text": f'### 服务<font color=#FF0000>【{action_type}】</font>通知 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} \n> '
+                        f'#### 服务<font color=#FF0000>【{server_name}】【{app_title}】</font>{action_type}完成 \n> '
+            }
+        }
+
+def server_status_msg_we_chat(action_type, server_name, app_title):
+    """ 服务状态通知 """
+    return {
+        "msgtype": "markdown",
+        "markdown": {
+            "content": f'服务<font color=#FF0000>【{action_type}】</font>通知 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} \n\n'
+                       f'### 服务<font color=#FF0000>【{server_name}】【{app_title}】</font>{action_type}完成 \n\n'
+        }
+    }
 
 
 def debug_msg_ding_ding():
