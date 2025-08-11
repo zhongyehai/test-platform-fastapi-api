@@ -25,17 +25,17 @@
 
 ### 2.创建MySQL数据库
 
-    数据库名自己取，编码选择utf8mb4，对应config.yaml下db配置为当前数据库信息即可
+    数据库名自己取，编码选择utf8mb4，对应config.py下db配置为当前数据库信息即可
     查看最大连接数 show variables like 'max_connections';
     设置最大连接数 set global max_connections=16384;
 
 ### 3.初始化数据库表结构（项目根目录下依次执行下面命令）：
 
-    3.1、第一次初始化数据库
+    3.1、第一次初始化数据库只需要执行以下步骤
         3.1.1. 初始化数据库配置、生成迁移文件: aerich init -t config.tortoise_orm_conf
         3.1.2. 把模型映射到数据库中: aerich init-db
 
-    3.2、已经初始化过数据库了，改了数据模型，重新映射
+    3.2、如果是已经初始化过数据库了，改了数据模型，需要重新映射则执行以下步骤
         3.2.1. 对比变更、并映射到数据库: aerich migrate
         3.2.2. 把最新版本的数据结构同步到aerich表: aerich upgrade
 

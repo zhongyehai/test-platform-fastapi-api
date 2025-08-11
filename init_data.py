@@ -265,7 +265,7 @@ async def init_user():
     # 创建用户
     print_type_delimiter("开始创建用户")
     user_list = [
-        {"account": "admin1", "password": "123456", "name": "管理员1", "role": ["管理员-后端", "管理员-前端"]},
+        {"account": "admin", "password": "123456", "name": "管理员", "role": ["管理员-后端", "管理员-前端"]},
         {"account": "manager", "password": "manager", "name": "业务线负责人", "role": ["业务线负责人"]},
         {"account": "common", "password": "common", "name": "测试员", "role": ["开发/测试人员"]}
     ]
