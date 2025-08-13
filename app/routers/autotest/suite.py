@@ -11,6 +11,7 @@ suite_router.add_get_route(
 suite_router.add_get_route("/template/download", suite_service.get_suite_template, summary="下载用例集导入模板")
 suite_router.add_post_route("/upload", suite_service.upload_suite, summary="导入用例集")
 suite_router.add_put_route("/sort", suite_service.change_suite_sort, summary="修改用例集排序")
+suite_router.add_post_route("/copy", suite_service.copy_suite, summary="复制用例集及其下的用例")
 suite_router.add_get_route("", suite_service.get_suite_detail, summary="获取用例集详情")
 suite_router.add_post_route("", suite_service.add_suite, summary="新增用例集")
 suite_router.add_put_route("", suite_service.change_suite, summary="修改用例集")

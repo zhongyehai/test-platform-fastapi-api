@@ -3,7 +3,7 @@ import os
 from fastapi.responses import FileResponse
 from fastapi import Request, UploadFile, File, Form, Depends
 
-from ...models.autotest.model_factory import ApiCaseSuite, ApiCase, AppCaseSuite, AppCase, UiCaseSuite, UiCase
+from ...models.autotest.model_factory import ApiCaseSuite, ApiCase, ApiStep, AppCaseSuite, AppCase, AppStep, UiCaseSuite, UiCase, UiStep
 from ...schemas.autotest import suite as schema
 from utils.make_data.make_xmind import get_xmind_first_sheet_data
 from utils.util.file_util import STATIC_ADDRESS, TEMP_FILE_ADDRESS
@@ -54,6 +54,34 @@ async def get_suite_detail(request: Request, form: schema.GetCaseSuiteForm = Dep
     model = ApiCaseSuite if request.app.test_type == "api" else AppCaseSuite if request.app.test_type == "app" else UiCaseSuite
     suite = await model.filter(id=form.id).first()
     return request.app.get_success(data=suite)
+
+async def copy_suite(request: Request, form: schema.CopyCaseSuiteForm):
+    suite_model, case_model, step_model = ApiCaseSuite, ApiCase, ApiStep
+    if request.app.test_type == "app":
+        suite_model, case_model, step_model = AppCaseSuite, AppCase, AppStep
+    elif request.app.test_type == "ui":
+        suite_model, case_model, step_model = UiCaseSuite, UiCase, UiStep
+    from_suite, parent_suite = await suite_model.filter(id=form.id).first(), await suite_model.filter(id=form.parent).first()
+
+    # 复制用例集
+    from_suite.project_id, from_suite.parent = parent_suite.project_id, parent_suite.id
+    from_suite.suite_type, from_suite.num = parent_suite.suite_type, parent_suite.num + 1
+    new_suite = await suite_model.model_create(dict(from_suite), request.state.user)
+
+    # 复制用例
+    case_id_list = await case_model.filter(suite_id=from_suite.id).all().values("id")
+    for case_id in case_id_list:
+        old_case = await case_model.filter(id=case_id["id"]).first()
+        old_case.suite_id = new_suite.id
+        new_case = await case_model.model_create(dict(old_case), request.state.user)
+
+        # 复制步骤
+        step_id_list = await step_model.filter(case_id=old_case.id).all().values("id")
+        for step_id in step_id_list:
+            old_step = await step_model.filter(id=step_id["id"]).first()
+            old_step.case_id = new_case.id
+            await step_model.model_create(dict(old_step), request.state.user)
+    return request.app.success("复制成功")
 
 
 async def add_suite(request: Request, form: schema.AddCaseSuiteForm):

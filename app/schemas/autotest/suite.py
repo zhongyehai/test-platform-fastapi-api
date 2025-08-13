@@ -45,3 +45,8 @@ class EditCaseSuiteForm(GetCaseSuiteForm):
         ..., title="用例集类型",
         description="base: 基础用例集，api: 单接口用例集，process: 流程用例集，assist: 造数据用例集")
     parent: Optional[int] = Field(title="父用例集id")
+
+
+class CopyCaseSuiteForm(GetCaseSuiteForm):
+    """ 复制用例集信息 """
+    parent: int = Field(..., title="复制后的用例集归属")
