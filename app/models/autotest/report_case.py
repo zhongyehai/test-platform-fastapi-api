@@ -127,6 +127,8 @@ class BaseReportCase(BaseModel):
         # 报告可能是用例，可能是接口
         suite_list = await cls.get_resport_suite_list(report_id, suite_model)
         resport_case_list = await cls.get_resport_case_list(report_id, get_detail=True)
+        if not resport_case_list:  # 报告可能已经被清除了
+            return []
         if not suite_list:  # 跑的是接口，没有用例集归属，需要手动生成
             suite_list = [{
                 "id": resport_case_list[0]["suite_id"],
