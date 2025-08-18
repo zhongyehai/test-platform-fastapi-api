@@ -69,14 +69,14 @@ async def copy_suite(request: Request, form: schema.CopyCaseSuiteForm):
     new_suite = await suite_model.model_create(dict(from_suite), request.state.user)
 
     # 复制用例
-    case_id_list = await case_model.filter(suite_id=from_suite.id).all().values("id")
+    case_id_list = await case_model.filter(suite_id=from_suite.id).order_by("num").all().values("id")
     for case_id in case_id_list:
         old_case = await case_model.filter(id=case_id["id"]).first()
         old_case.suite_id = new_suite.id
         new_case = await case_model.model_create(dict(old_case), request.state.user)
 
         # 复制步骤
-        step_id_list = await step_model.filter(case_id=old_case.id).all().values("id")
+        step_id_list = await step_model.filter(case_id=old_case.id).order_by("num").all().values("id")
         for step_id in step_id_list:
             old_step = await step_model.filter(id=step_id["id"]).first()
             old_step.case_id = new_case.id

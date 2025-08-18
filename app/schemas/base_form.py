@@ -5,7 +5,6 @@ import httpx
 import validators
 from typing import Optional, Union
 from pydantic import BaseModel as pydanticBaseModel, Field
-from pydantic.error_wrappers import ValidationError
 
 from utils.client.test_runner.parser import extract_variables, parse_function, extract_functions
 from utils.util.json_util import JsonUtil
@@ -158,14 +157,14 @@ class BaseForm(pydanticBaseModel, JsonUtil):
         """ 引用的变量需存在 """
         for variable in extract_variables(content):
             if variable not in variables_container:
-                raise ValidationError(f"{message}引用的变量【{variable}】不存在")
+                raise ValueError(f"{message}引用的变量【{variable}】不存在")
 
     def validate_header_format(self, content: list):
         """ 头部信息，格式校验 """
         for index, data in enumerate(content):
             title, key, value = f"头部信息设置，第【{index + 1}】行", data.get("key"), data.get("value")
             if not ((key and value) or (not key and not value)):
-                raise ValidationError(f"{title}，要设置头部信息，则key和value都需设置")
+                raise ValueError(f"{title}，要设置头部信息，则key和value都需设置")
 
     def validate_variable_format(self, content: list, msg_title='自定义变量'):
         """ 自定义变量，格式校验 """
