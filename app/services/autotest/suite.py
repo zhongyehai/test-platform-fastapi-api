@@ -63,25 +63,36 @@ async def copy_suite(request: Request, form: schema.CopyCaseSuiteForm):
         suite_model, case_model, step_model = UiCaseSuite, UiCase, UiStep
     from_suite, parent_suite = await suite_model.filter(id=form.id).first(), await suite_model.filter(id=form.parent).first()
 
-    # 复制用例集
-    from_suite.project_id, from_suite.parent = parent_suite.project_id, parent_suite.id
-    from_suite.suite_type, from_suite.num = parent_suite.suite_type, parent_suite.num + 1
-    new_suite = await suite_model.model_create(dict(from_suite), request.state.user)
+    await deep_copy_suite(from_suite, parent_suite, suite_model, case_model, step_model, request.state.user, form.deep)
+    return request.app.success("复制成功")
+
+async def deep_copy_suite(from_suite, parent_suite, suite_model, case_model, step_model, request_user, is_deep=False):
+    # 复制用例集，如果已经有同名的用例集，则把已存在，将下属的用例集和用例复制到该用例集下面
+    new_suite = await suite_model.filter(parent=parent_suite.id, name=from_suite.name).order_by("num").first()
+    if new_suite is None:
+        from_suite.project_id, from_suite.parent = parent_suite.project_id, parent_suite.id
+        from_suite.suite_type, from_suite.num = parent_suite.suite_type, parent_suite.num + 1
+        new_suite = await suite_model.model_create(dict(from_suite), request_user)
 
     # 复制用例
     case_id_list = await case_model.filter(suite_id=from_suite.id).order_by("num").all().values("id")
     for case_id in case_id_list:
         old_case = await case_model.filter(id=case_id["id"]).first()
         old_case.suite_id = new_suite.id
-        new_case = await case_model.model_create(dict(old_case), request.state.user)
+        new_case = await case_model.model_create(dict(old_case), request_user)
 
         # 复制步骤
         step_id_list = await step_model.filter(case_id=old_case.id).order_by("num").all().values("id")
         for step_id in step_id_list:
             old_step = await step_model.filter(id=step_id["id"]).first()
             old_step.case_id = new_case.id
-            await step_model.model_create(dict(old_step), request.state.user)
-    return request.app.success("复制成功")
+            await step_model.model_create(dict(old_step), request_user)
+
+    # 如果用例集下还有用例集，则递归复制用例集下的用例集和用例
+    if is_deep:
+        if child_suite_list := await suite_model.filter(parent=from_suite.id).all():
+            for child_suite in child_suite_list:
+                await deep_copy_suite(child_suite, new_suite, suite_model, case_model, step_model, request_user, is_deep)
 
 
 async def add_suite(request: Request, form: schema.AddCaseSuiteForm):

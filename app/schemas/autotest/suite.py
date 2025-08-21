@@ -50,3 +50,4 @@ class EditCaseSuiteForm(GetCaseSuiteForm):
 class CopyCaseSuiteForm(GetCaseSuiteForm):
     """ 复制用例集信息 """
     parent: int = Field(..., title="复制后的用例集归属")
+    deep: bool = Field(True, title="是否递归复制")
