@@ -7,7 +7,7 @@ from .client.http import HttpSession
 from .client.webdriver import WebDriverSession
 from .exceptions import StopTest
 from .runner_context import SessionContext
-from .webdriver_action import GetWebDriver, GetAppDriver
+from .webdriver_action import GetUiDriver, GetAppDriver, get_web_driver
 from utils.logs.redirect_print_log import RedirectPrintLogToMemory
 from utils.logs.log import logger
 
@@ -75,17 +75,18 @@ class Runner:
     async def init_session_context(self):
         await self.session_context.init_test_variables()
 
-    def init_client_session(self):
+    async def init_client_session(self):
         """ 根据不同的测试类型获取不同的client_session """
         if self.client_session is None:
             if self.run_type == "api":
                 self.client_session = HttpSession(self.base_url)
             elif self.run_type == "ui":
                 self.client_session = WebDriverSession()
-                self.driver = GetWebDriver(browser_driver_path=self.browser_driver_path, browser_name=self.browser_name)
+                self.driver = await get_web_driver(
+                    driver_type="ui", browser_driver_path=self.browser_driver_path, browser_name=self.browser_name)
             else:
                 self.client_session = WebDriverSession()
-                self.driver = GetAppDriver(**self.appium_config)
+                self.driver = await get_web_driver(driver_type="app", **self.appium_config)
 
     def try_close_browser(self):
         """ 强制关闭浏览器 """
@@ -266,14 +267,15 @@ class Runner:
                 self.session_context, extractors.get("extractors", []))
             self.session_context.update_test_variables("response", self.resp_obj)
         else:
-            # 执行测试步骤浏览器操作
-            self.client_session.do_action(
+            # 执行测试步骤浏览器操作, 操作比较耗时，异步执行
+            await self.client_session.async_do_action(
                 self.driver,
                 name=step_name,
                 case_id=case_id,
                 variables_mapping=copy.deepcopy(variables_mapping),
                 **parsed_step
             )
+
             # 数据提取
             await self.report_step.test_is_start_extract()
             extracted_variables_mapping = await extract.extract_data(self.session_context, self.driver, extractors)
@@ -353,7 +355,7 @@ class Runner:
         self.meta_datas = None
         self.redirect_print = RedirectPrintLogToMemory()  # 重定向自定义函数的打印到内存中
         try:
-            self.init_client_session()  # 执行步骤前判断有没有初始化client_session
+            await self.init_client_session()  # 执行步骤前判断有没有初始化client_session
         except Exception as error:
             # ui
             if "PATH" in str(error):

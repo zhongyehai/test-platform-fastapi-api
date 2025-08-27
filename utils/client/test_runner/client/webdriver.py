@@ -1,4 +1,7 @@
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from datetime import datetime
 
 from selenium.common.exceptions import SessionNotCreatedException, InvalidArgumentException, WebDriverException
@@ -14,6 +17,24 @@ class WebDriverSession(BaseSession):
     def __init__(self):
         self.driver = None
         self.init_step_meta_data()
+
+    async def async_do_action(self, driver, name=None, case_id=None, variables_mapping={}, **kwargs):
+        """ 操作比较耗时，改为异步执行 """
+        kwargs.update(dict(
+            driver=driver,
+            name=name,
+            case_id=case_id,
+            variables_mapping=variables_mapping
+        ))
+        max_workers = min(50, os.cpu_count() * 5)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            try:
+                bound_func = partial(self.do_action, *(), **kwargs)
+                return await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(executor, bound_func), timeout=600)
+            except Exception as e:
+                executor.shutdown(wait=True)  # 强制终止超时任务
+                raise
 
     def do_action(self, driver, name=None, case_id=None, variables_mapping={}, **kwargs):
         self.meta_data["name"] = name  # 记录测试名

@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-import base64
-import json
-import platform
-import time
 import os
+import time
+import json
+import base64
+import asyncio
+import platform
 import subprocess
+from functools import partial
 from unittest.case import SkipTest
+from concurrent.futures import ThreadPoolExecutor
 
 from appium import webdriver as appium_webdriver
 from appium.webdriver.common.touch_action import TouchAction
@@ -643,7 +646,7 @@ class Actions:
         return self.driver.get_screenshot_as_png()
 
 
-class GetWebDriver(Actions):
+class GetUiDriver(Actions):
     """ 浏览器对象管理 """
 
     def __init__(self, browser_driver_path: str, browser_name: str):
@@ -748,9 +751,23 @@ class GetAppDriver(Actions):
     #         pass
 
 
+async def get_web_driver(driver_type, **kwargs):
+    """ 实例化driver比较耗时，异步执行 """
+    func = GetAppDriver if driver_type == 'app' else GetUiDriver
+    max_workers = min(50, os.cpu_count() * 5)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        try:
+            bound_func = partial(func, *(), **kwargs)
+            return await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(executor, bound_func), timeout=600)
+        except Exception as e:
+            executor.shutdown(wait=True)  # 强制终止超时任务
+            raise
+
+
 if __name__ == '__main__':
     # print(Driver.get_action_mapping())
     # print(Driver.get_assert_mapping())
     driver_path = r'D:\项目\test-platform\base\api\browser_drivers\chromedriver.exe'
-    driver = GetWebDriver(driver_path, 'chrome')
+    driver = GetUiDriver(driver_path, 'chrome')
     driver.action_01open('https://www.baidu.com/')

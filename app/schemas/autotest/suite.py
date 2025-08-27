@@ -10,6 +10,7 @@ class FindCaseSuite(PaginationForm):
     name: Optional[str] = Field(title="用例集名")
     suite_type: Optional[list] = Field(title="用例集类型")
     project_id: int = Field(..., title="服务id")
+    parent: Optional[int] = Field(title="上级用例集")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -18,6 +19,8 @@ class FindCaseSuite(PaginationForm):
             filter_dict["name__icontains"] = self.name
         if self.suite_type:
             filter_dict["suite_type__in"] = self.suite_type
+        if self.parent:
+            filter_dict["parent"] = self.parent
         return filter_dict
 
 
@@ -48,6 +51,11 @@ class EditCaseSuiteForm(GetCaseSuiteForm):
 
 
 class CopyCaseSuiteForm(GetCaseSuiteForm):
-    """ 复制用例集信息 """
+    """ 复制用例集 """
     parent: int = Field(..., title="复制后的用例集归属")
     deep: bool = Field(True, title="是否递归复制")
+
+class ModuleToCaseSuiteForm(BaseForm):
+    """ 模块转用例集 """
+    module: int = Field(..., title="模块id")
+    parent: int = Field(..., title="复制后的用例集归属")
