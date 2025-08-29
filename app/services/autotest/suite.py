@@ -174,13 +174,39 @@ async def change_suite(request: Request, form: schema.EditCaseSuiteForm):
 
 
 async def delete_suite(request: Request, form: schema.GetCaseSuiteForm):
-    suite_model, case_model = ApiCaseSuite, ApiCase
+    suite_model, case_model, step_model = ApiCaseSuite, ApiCase, ApiStep
     if request.app.test_type == "app":
-        suite_model, case_model = AppCaseSuite, AppCase
+        suite_model, case_model, step_model = AppCaseSuite, AppCase, AppStep
     elif request.app.test_type == "ui":
-        suite_model, case_model = UiCaseSuite, UiCase
+        suite_model, case_model, step_model = UiCaseSuite, UiCase, UiStep
 
-    await suite_model.validate_is_not_exist("请先删除当前用例集的子用例集", parent=form.id)
-    await case_model.validate_is_not_exist("请先删除当前用例集下的用例", suite_id=form.id)
-    await suite_model.filter(id=form.id).delete()
+    waite_delete_suite_list, waite_delete_case_list, waite_delete_step_list = [], [], []
+    async def get_waite_delete_data(suite_id):
+        waite_delete_suite_list.append(suite_id)
+
+        # 当前用例集下的用例列表
+        case_list = [case["id"] for case in await case_model.filter(suite_id=suite_id).all().values("id")]
+        if case_list:
+            waite_delete_case_list.extend(case_list)
+
+            # 如果有被引用的用例，直接返回
+            step = await step_model.filter(quote_case__in=case_list).first().values("case_id")
+            if step and step["case_id"]:
+                step_case = await case_model.filter(id=step["case_id"]).first().values("name", "suite_id")
+                suite = await suite_model.filter(id=step_case["suite_id"]).first().values("name")
+                raise ValueError(f'用例集【{suite["name"]}】下的用例【{step_case["name"]}】已引用此次要删除的用例，请先解除引用')
+
+            # 步骤列表
+            step_list = [step["id"] for step in await step_model.filter(case_id__in=case_list).all().values("id")]
+            waite_delete_step_list.extend(step_list)
+
+        # 当前用例集下的用例集列表
+        suite_list = [suite["id"] for suite in await suite_model.filter(parent=suite_id).all().values("id")]
+        for suite_id in suite_list:
+            await get_waite_delete_data(suite_id)
+
+    await get_waite_delete_data(form.id)
+    await step_model.filter(id__in=waite_delete_step_list).delete()
+    await case_model.filter(id__in=waite_delete_case_list).delete()
+    await suite_model.filter(id__in=waite_delete_suite_list).delete()
     return request.app.delete_success()
