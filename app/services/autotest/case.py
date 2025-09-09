@@ -240,7 +240,7 @@ async def run_case(request: Request, form: schema.RunCaseForm, background_tasks:
         background_tasks.add_task(case_runner(
             report_id=report.id, case_id_list=case_id_list, is_async=form.is_async, env_code=env_code, env_name=env["name"],
             browser=form.browser, temp_variables=form.temp_variables, run_type=request.app.test_type,
-            appium_config=appium_config
+            appium_config=appium_config, update_to=form.update_to
         ).parse_and_run)
 
     return request.app.trigger_success({

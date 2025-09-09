@@ -163,6 +163,7 @@ class BaseReport(BaseModel):
         update_dict = {"is_passed": 1 if run_result == "success" else 0, "status": status}
         if summary:
             update_dict["summary"] = summary
+            self.summary = summary
         await self.__class__.filter(id=self.id).update(**update_dict)
 
     @classmethod

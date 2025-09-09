@@ -22,13 +22,16 @@ from utils.logs.log import logger
 
 class RunTestRunner:
 
-    def __init__(self, report_id=None, env_code=None, env_name=None, run_type="api", extend={}, task_dict={}):
+    def __init__(
+            self, report_id=None, env_code=None, env_name=None, run_type="api", extend={}, task_dict={}, update_to=None
+    ):
         self.env_code = env_code  # 运行环境id
         self.env_name = env_name  # 运行环境名，用于发送即时通讯
         self.extend = extend
         self.report_id = report_id
         self.run_type = run_type
         self.task_dict = task_dict
+        self.update_to = update_to  # 把当前产生的报告的用例和步骤执行记录更新到指定的报告下（重跑并更新）
 
         self.time_out = 60
         self.wait_time_out = 5
@@ -241,6 +244,8 @@ class RunTestRunner:
                         "very_slow"] = await ApiReportStep.get_element_id_by_report_step_id(
                         report_summary["stat"]["response_time"]["very_slow"])
                 await self.send_report_if_task([{"report_id": report_id, "report_summary": report_summary}])
+                await self.update_record_to_report()  # 覆盖之前的执行结果（如有需要）
+
             else:  # 合并通知
                 # 获取当前批次下的所有测试报告，summary
                 query_res = await self.report_model.filter(batch_id=self.report.batch_id).all().values("id", "summary")
@@ -254,6 +259,47 @@ class RunTestRunner:
                 else:
                     send_list = [{"report_id": query["id"], "report_summary": query["summary"]} for query in query_res]
                 await self.send_report_if_task(send_list)
+
+    async def update_record_to_report(self):
+        """ 仅用于重跑！！如果指定了要更新覆盖的报告，则把当前执行的报告下的用例和步骤更新到原有失败的用例和步骤 """
+        if self.update_to:
+            use_api_list, add_step = [], 0
+            for case_id in self.report.trigger_id:
+                # 更新report_case
+                current_report_case = await self.report_case_model.filter(report_id=self.report.id,case_id=case_id).first()
+                await self.report_case_model.filter(report_id=self.update_to, case_id=case_id).update(
+                    result=current_report_case.result, case_data=current_report_case.case_data,
+                    summary=current_report_case.summary, error_msg=current_report_case.error_msg
+                )
+
+                # 更新report_step
+                report_step_id_list = await self.report_step_model.filter(report_id=self.report.id,report_case_id=current_report_case.id).all().values("id")
+                for report_step_id in report_step_id_list:
+                    current_report_step = await self.report_step_model.filter(id=report_step_id["id"]).first()
+                    update_report_step = await self.report_step_model.filter(report_id=self.update_to, case_id=case_id, step_id=current_report_step.step_id).first()
+                    if update_report_step is None:  # 如果指定的报告里面可能没有这个步骤，需要则新建
+                        await self.report_step_model.model_create(dict(current_report_step))
+                        use_api_list.append(current_report_step.element_id)
+                        add_step += 1
+                    else:
+                        # TODO 精确区分，步骤是不通过变通过，还是通过变不通过
+                        await self.report_step_model.filter(
+                            report_id=self.update_to, case_id=case_id, step_id=current_report_step.step_id).update(
+                            status=current_report_step.status, process=current_report_step.process,
+                            result=current_report_step.result, step_data=current_report_step.step_data,
+                            summary=current_report_step.summary
+                        )
+
+            # 更新report
+            update_summary = await self.report_model.filter(id=self.update_to).first().values("summary")
+            update_summary["summary"]["stat"]["count"]["api"] += len(use_api_list)
+            update_summary["summary"]["stat"]["count"]["step"] += add_step
+            update_summary["summary"]["stat"]["test_case"]["fail"] -= self.report.summary["stat"]["test_case"]["success"]
+            update_summary["summary"]["stat"]["test_case"]["success"] += self.report.summary["stat"]["test_case"]["success"]
+            update_summary["summary"]["stat"]["test_step"]["total"] += add_step
+            await self.report_model.filter(id=self.update_to).update(
+                summary=update_summary["summary"], is_passed=self.report.is_passed, notified=False  # 更新后未通知
+            )
 
     async def run_case(self):
         """ 调 testRunner().run() 执行测试 """

@@ -23,7 +23,7 @@ class BaseModel(models.Model, JsonUtil):
          3、自动加上user_id
          """
         if "id" in data_dict: data_dict.pop("id")
-        if "num" in cls._meta.fields: data_dict["num"] = await cls.get_insert_num()
+        # if "num" in cls._meta.fields: data_dict["num"] = await cls.get_insert_num()
         if user: data_dict["create_user"] = data_dict["update_user"] = user.id
         return await cls.create(**data_dict)
 
