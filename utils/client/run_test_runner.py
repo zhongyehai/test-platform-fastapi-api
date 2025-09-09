@@ -297,6 +297,7 @@ class RunTestRunner:
             update_summary["summary"]["stat"]["test_case"]["fail"] -= self.report.summary["stat"]["test_case"]["success"]
             update_summary["summary"]["stat"]["test_case"]["success"] += self.report.summary["stat"]["test_case"]["success"]
             update_summary["summary"]["stat"]["test_step"]["total"] += add_step
+            update_summary["summary"]["result"] = self.report.summary["result"]  # 更新测试结果
             await self.report_model.filter(id=self.update_to).update(
                 summary=update_summary["summary"], is_passed=self.report.is_passed, notified=False  # 更新后未通知
             )
