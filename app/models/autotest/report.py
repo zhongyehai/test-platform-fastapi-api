@@ -164,6 +164,7 @@ class BaseReport(BaseModel):
         if summary:
             update_dict["summary"] = summary
             self.summary = summary
+        self.is_passed = update_dict["is_passed"]
         await self.__class__.filter(id=self.id).update(**update_dict)
 
     @classmethod
