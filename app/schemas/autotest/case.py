@@ -129,7 +129,7 @@ class RunCaseForm(BaseForm):
     server_id: Optional[int] = Field(title="执行服务器（app自动化必传）")
     phone_id: Optional[int] = Field(title="执行手机（app自动化必传）")
     no_reset: Optional[bool] = Field(default=False, title="是否不重置手机（app自动化必传）")
-    update_to: Optional[int] = Field(default=None, title="要更新到的报告id", description="把结果、执行记录，更新到指定的报告下")
+    insert_to: Optional[int] = Field(default=None, title="要插入到的报告id", description="把结果、执行记录，插入到指定的报告下")
 
     async def validate_request(self, project_model, project_env_model, case_suite_model, case_model, *args, **kwargs):
 
