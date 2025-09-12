@@ -60,6 +60,7 @@ async def copy_step(request: Request, form: schema.CopyStepForm):
     # step.name = f'{step.name}_copy'
     if form.case_id:
         step.case_id = form.case_id
+        step.num = await step_model.get_insert_num()
     new_step = await step_model.model_create(dict(step), request.state.user)
     await case_model.merge_output(new_step.case_id, [new_step])  # 合并出参
 
@@ -81,7 +82,9 @@ async def add_step(request: Request, form: schema.AddStepForm):
 
     await form.validate_request()
 
-    step = await step_model.model_create(form.dict(), request.state.user)
+    add_step_data = form.dict()
+    add_step_data["num"] = await step_model.get_insert_num()
+    step = await step_model.model_create(add_step_data, request.state.user)
     await case_model.merge_variables(step.quote_case, step.case_id)
     await case_model.merge_output(step.case_id, [int(step.quote_case) if step.quote_case else step])  # 合并出参
 

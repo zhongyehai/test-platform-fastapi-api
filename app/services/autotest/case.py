@@ -127,12 +127,12 @@ async def case_copy_step(request: Request, form: schema.CopyCaseStepForm):
         case_model, step_model = UiCase, UiStep
 
     # 复制指定用例的步骤到当前用例下
-    step_list, max_num = [], await step_model.get_max_num()
+    step_list, insert_num = [], await step_model.get_insert_num()
     from_step_list = await step_model.filter(case_id=form.from_case).order_by("num").all()
 
     for index, step in enumerate(from_step_list):
         step_dict = dict(step)
-        step_dict["case_id"] = form.to_case
+        step_dict["case_id"], step_dict["num"] = form.to_case, insert_num + index
         new_step = await step_model.model_create(step_dict, request.state.user)
         step_list.append(dict(new_step))
     await case_model.merge_output(form.to_case, step_list)  # 合并出参
