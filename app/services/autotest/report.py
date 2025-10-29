@@ -1,6 +1,6 @@
 from fastapi import Request, BackgroundTasks, Depends
 
-from app.schemas.enums import ApiCaseSuiteTypeEnum, ReceiveTypeEnum
+from app.schemas.enums import ApiCaseSuiteTypeEnum, ReceiveTypeEnum, SendReportTypeEnum
 from utils.message.send_report import send_report
 from ...models.autotest.model_factory import ApiReport, ApiReportCase, ApiReportStep, AppReport, AppReportCase, \
     AppReportStep, UiReport, UiReportCase, UiReportStep, ApiMsg, ApiCase, ApiStep, ApiCaseSuite, \
@@ -45,7 +45,7 @@ async def save_report_as_case(request: Request, form: schema.GetReportForm = Dep
     return request.app.post_success()
 
 
-async def notify_report(request: Request, form: schema.GetReportForm):
+async def notify_report(request: Request, form: schema.NotifyReportForm):
     front_host = await Config.get_report_host()
     report_model, task_model, report_addr = ApiReport, ApiTask, f'{front_host}{await Config.get_api_report_addr()}'
     if request.app.test_type == "app":
@@ -56,7 +56,9 @@ async def notify_report(request: Request, form: schema.GetReportForm):
     report = await report_model.filter(id=form.id, run_type='task', notified=False).first()
     if report:
         task_dict = dict(await task_model.filter(id=report.trigger_id[0]).first())
-        if task_dict["receive_type"] == ReceiveTypeEnum.EMAIL:  # 邮件
+        # 发送渠道、默认、钉钉、企业微信、邮件
+        if form.notify_to == 'email' or (form.notify_to == 'default' and task_dict["receive_type"] == ReceiveTypeEnum.EMAIL):  # 邮件
+            task_dict["receive_type"] = ReceiveTypeEnum.EMAIL
             email_server = await Config.filter(name=task_dict["email_server"]).first().values("value")
             task_dict["email_server"] = email_server["value"]
             email_from = await User.filter(id=task_dict["email_from"]).first().values("email", "email_password")
@@ -68,6 +70,9 @@ async def notify_report(request: Request, form: schema.GetReportForm):
             task_dict["webhook_list"] = await WebHook.get_webhook_list(
                 task_dict["receive_type"], task_dict["webhook_list"])
 
+        if form.notify_to != 'default':
+            task_dict["is_send"] = SendReportTypeEnum.ALWAYS.value  # 手动触发发送通知的，且选择的通知渠道不是任务设置的，不管结果如何都通知
+
         res = await send_report(
             content_list=[{"report_id": report.id, "report_summary": report.summary}],
             **task_dict,
@@ -76,7 +81,7 @@ async def notify_report(request: Request, form: schema.GetReportForm):
         if res is True:
             await report_model.filter(id=form.id).update(notified=True)
             return request.app.success("触发通知成功")
-        return request.app.fail("通知失败，请检查数据")
+        return request.app.fail("通知失败，请检查通知渠道设置")
     return request.app.fail("当前报告不符合触发通知条件")
 
 

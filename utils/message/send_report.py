@@ -78,7 +78,7 @@ async def send_report(**kwargs):
             # Thread(target=send_inspection_by_email, args=[content_list, kwargs]).start()
         else:
             return await send_inspection_by_msg(receive_type, content_list, kwargs)
-    return True
+    return None
 
 async def call_back_for_pipeline(task_id, call_back_info: list, extend: dict, status):
     """ 把测试结果回调给流水线 """

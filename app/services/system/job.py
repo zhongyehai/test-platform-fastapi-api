@@ -75,8 +75,7 @@ class JobFuncs:
         hits_report_id = await Hits.filter(test_type='app').all().values("report_id")
         hits_report_id = [data["report_id"] for data in hits_report_id]
 
-        delete_report_id = await AppReport.filter(
-            report_id__not_in=hits_report_id, create_time__lt=time_point).values("id")
+        delete_report_id = await AppReport.filter(id__not_in=hits_report_id, create_time__lt=time_point).values("id")
         delete_report_id = [data["id"] for data in delete_report_id]
 
         # 删除截图
@@ -89,8 +88,7 @@ class JobFuncs:
         hits_report_id = await Hits.filter(test_type='ui').all().values("report_id")
         hits_report_id = [data["report_id"] for data in hits_report_id]
 
-        delete_report_id = await AppReport.filter(
-            report_id__not_in=hits_report_id, create_time__lt=time_point).values("id")
+        delete_report_id = await AppReport.filter(id__not_in=hits_report_id, create_time__lt=time_point).values("id")
         delete_report_id = [data["id"] for data in delete_report_id]
 
         # 删除截图

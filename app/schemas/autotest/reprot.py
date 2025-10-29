@@ -98,3 +98,8 @@ class ChangeReportStepStatus(BaseForm):
     report_case_id: Optional[int] = Field(None, title="报告用例id")
     report_step_id: Optional[int] = Field(None, title="报告步骤id")
     status: str = Field(ReportStepStatusEnum.RESUME, title="状态", description="stop、pause、resume")
+
+
+class NotifyReportForm(GetReportForm):
+    """ 通知报告 """
+    notify_to: str = Field('default', title="发送渠道", description="default、ding_ding、we_chat、email")
