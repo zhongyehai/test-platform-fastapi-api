@@ -609,7 +609,7 @@ class Actions:
     def assert_63is_title_contains(self, text: str, *args, **kwargs):
         """ 页面title包含 """
         expect_value = self.extract_08_title()
-        assert text in expect_value, {'expect_value': expect_value}
+        assert args[0] in expect_value, {'expect_value': expect_value}
 
     def assert_64is_alert_present(self, wait_time_out=None, *args, **kwargs):
         """ 页面有alert，有返回alert对象，没有返回False """
