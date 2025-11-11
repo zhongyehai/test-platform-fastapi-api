@@ -41,14 +41,15 @@ async def element_upload(request: Request, file: UploadFile = File(), page_id: s
     if request.app.test_type != "app":
         page_model, element_model = UiPage, UiElement
 
-    if page := await page_model.filter(id=page_id).first() is None:
+    page = await page_model.filter(id=page_id).first()
+    if page is None:
         return request.app.fail("页面不存在")
 
     if not file or file.filename.endswith("xls") is False:
         return request.app.fail("请上传后缀为xls的Excel文件")
     # [{"元素名称": "账号输入框", "定位方式": "根据id属性定位", "元素表达式": "account", "等待元素出现的超时时间": 10.0}]
-    excel_data = parse_file_content(file.read())
-    option_dict = {option["label"]: option["value"] for option in await Config.get_find_element_option()}
+    excel_data = parse_file_content(await file.read())
+    option_dict = {option["label"]: option["value"] for option in await Config.get_find_element_by_app()}
     element_list = []
     for element_data in excel_data:
         name, by = element_data.get("元素名称"), element_data.get("定位方式")
@@ -66,7 +67,7 @@ async def element_upload(request: Request, file: UploadFile = File(), page_id: s
                 update_user=request.state.user.id
             ))
     if len(element_list) > 0:
-        await page_model.bulk_create(element_list)
+        await element_model.bulk_create(element_list)
     return request.app.success("元素导入成功")
 
 

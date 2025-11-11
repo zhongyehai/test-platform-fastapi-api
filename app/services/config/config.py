@@ -80,23 +80,9 @@ async def get_config_skip_if(request: Request, form: schema.GetSkipIfConfigForm 
 
 
 async def get_config_find_element(request: Request, form: schema.GetFindElementByForm = Depends()):
-    data = [
-        {"label": "根据id属性定位", "value": "id"},
-        {"label": "根据xpath表达式定位", "value": "xpath"},
-        {"label": "根据class选择器定位", "value": "class name"},
-        {"label": "根据css选择器定位", "value": "css selector"},
-        {"label": "根据name属性定位", "value": "name"},
-        {"label": "根据tag名字定位 ", "value": "tag name"},
-        {"label": "根据超链接文本定位", "value": "link text"},
-        {"label": "页面地址", "value": "url"},
-        {"label": "根据具体坐标定位", "value": "coordinate"}
-    ]
     if form.test_type == "app":
-        data += [
-            {"label": "根据元素范围坐标定位", "value": "bounds"},
-            {"label": "accessibility_id", "value": "accessibility id"}
-        ]
-    return request.app.get_success(data=data)
+        return request.app.get_success(data=await Config.get_find_element_by_app())
+    return request.app.get_success(data=await Config.get_find_element_by_ui())
 
 
 async def get_config_detail(request: Request, form: schema.GetConfigForm = Depends()):

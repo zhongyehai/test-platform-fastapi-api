@@ -77,11 +77,8 @@ class AddUiElementDataForm(pydanticBaseModel):
     name: str = Field(..., title="名字")
     by: str = Field(..., title="定位方式")
     element: str = Field(..., title="定位表达式")
-
-
-class AddAppElementDataForm(AddUiElementDataForm):
     wait_time_out: Optional[int] = Field(5, title="元素等待超时时间")
-    template_device: int = Field(..., title="定位元素时参照的手机")
+    template_device: Optional[int] = Field(None, title="定位元素时参照的手机")
 
 
 class BaseForm(pydanticBaseModel, JsonUtil):

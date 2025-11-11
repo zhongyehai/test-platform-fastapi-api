@@ -11,7 +11,7 @@
     详见 https://stackoverflow.com/questions/76648015/fastapi-tortoise-orm-got-keyerror-module-on-pydantic-model-creator
     其他包酌情升级
 
-## 线上预览：http://139.196.100.202/#/login  账号：admin、密码：123456，请不要修改密码
+## 线上预览：http://60.204.247.140/login  账号：admin、密码：123456，请不要修改密码
 
 ## 前端传送门：https://github.com/zhongyehai/test-platform-fastapi-front
 

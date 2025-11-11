@@ -1,7 +1,7 @@
 from typing import Optional, List
 from pydantic import Field
 
-from ..base_form import BaseForm, ChangeSortForm, PaginationForm, AddAppElementDataForm
+from ..base_form import BaseForm, ChangeSortForm, PaginationForm, AddUiElementDataForm
 
 
 class ElementListForm(PaginationForm):
@@ -31,7 +31,7 @@ class AddElementForm(BaseForm):
     project_id: int = Field(..., title="项目id")
     module_id: int = Field(..., title="模块id")
     page_id: int = Field(..., title="页面id")
-    element_list: List[AddAppElementDataForm] = Field(..., title="元素list")
+    element_list: List[AddUiElementDataForm] = Field(..., title="元素list")
 
 
 class EditElementForm(BaseForm):

@@ -106,13 +106,32 @@ class Config(NumFiled):
         return cls.loads(await cls.get_config("holiday_list"))
 
     @classmethod
-    async def get_find_element_option(cls):
-        return cls.loads(await cls.get_config("find_element_option"))
-
-    @classmethod
     async def get_shell_command_info(cls):
         """ 获取sell造数据的配置项 """
         return cls.loads(await cls.get_config("shell_command_info"))
+
+    @classmethod
+    async def get_find_element_by_ui(cls):
+        return [
+        {"label": "根据id属性定位", "value": "id"},
+        {"label": "根据xpath表达式定位", "value": "xpath"},
+        {"label": "根据class选择器定位", "value": "class name"},
+        {"label": "根据css选择器定位", "value": "css selector"},
+        {"label": "根据name属性定位", "value": "name"},
+        {"label": "根据tag名字定位 ", "value": "tag name"},
+        {"label": "根据超链接文本定位", "value": "link text"},
+        {"label": "页面地址", "value": "url"},
+        {"label": "根据具体坐标定位", "value": "coordinate"}
+    ]
+
+    @classmethod
+    async def get_find_element_by_app(cls):
+        data = await cls.get_find_element_by_ui()
+        data.extend([
+            {"label": "根据元素范围坐标定位", "value": "bounds"},
+            {"label": "accessibility_id", "value": "accessibility id"}
+        ])
+        return data
 
     @classmethod
     async def get_config_detail(cls, conf_id=None, conf_code=None):
