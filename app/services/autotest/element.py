@@ -104,7 +104,10 @@ async def add_element(request: Request, form: schema.AddElementForm):
 
 async def change_element(request: Request, form: schema.EditElementForm):
     model = AppElement if request.app.test_type == "app" else UiElement
-    await model.filter(id=form.id).update(**form.get_update_data(request.state.user.id))
+    data = form.get_update_data(request.state.user.id)
+    if request.app.test_type == "ui":
+        data.pop("template_device")
+    await model.filter(id=form.id).update(**data)
     return request.app.put_success()
 
 
