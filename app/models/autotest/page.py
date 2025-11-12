@@ -7,7 +7,7 @@ class BaseApi(BaseModel):
     """ 页面表 """
     name = fields.CharField(255, default="", description="接口名称")
     num = fields.IntField(null=True, description="接口序号")
-    desc = fields.CharField(255, default="", description="接口描述")
+    desc = fields.CharField(255, null=True, default="", description="接口描述")
     project_id = fields.IntField(null=True, index=True, description="所属的服务id")
     module_id = fields.IntField(null=True, index=True, description="所属的模块id")
 

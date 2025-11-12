@@ -1,7 +1,7 @@
 from typing import Optional, List
 from pydantic import Field
 
-from ..base_form import BaseForm, ChangeSortForm, PaginationForm, AddCaseDataForm
+from ..base_form import BaseForm, ChangeSortForm, PaginationForm, AddPageDataForm
 
 
 class PageListForm(PaginationForm):
@@ -26,7 +26,7 @@ class AddPageForm(BaseForm):
     """ 添加页面信息的校验 """
     project_id: int = Field(..., title="项目id")
     module_id: int = Field(..., title="模块id")
-    page_list: List[AddCaseDataForm] = Field(..., title="页面list")
+    page_list: List[AddPageDataForm] = Field(..., title="页面list")
 
 
 class EditPageForm(GetPageForm):

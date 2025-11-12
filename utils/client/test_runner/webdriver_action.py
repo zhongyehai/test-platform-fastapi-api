@@ -37,12 +37,16 @@ class Actions:
     @property
     def width(self):
         """ 获取手机屏幕宽度 """
-        return self.driver.get_window_size()['width']
+        size_width = self.driver.get_window_size()['width']
+        print(f'width: {size_width}')
+        return size_width
 
     @property
     def height(self):
         """ 获取屏幕高度 """
-        return self.driver.get_window_size()['height']
+        size_height = self.driver.get_window_size()['height']
+        print(f'size_height: {size_height}')
+        return size_height
 
     @classmethod
     def get_class_property(cls, startswith: str, *args, **kwargs):

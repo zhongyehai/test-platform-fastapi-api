@@ -73,6 +73,11 @@ class AddCaseDataForm(pydanticBaseModel):
     desc: str = Field(..., title="描述")
 
 
+class AddPageDataForm(pydanticBaseModel):
+    name: str = Field(..., title="名字")
+    desc: Optional[str] = Field(None, title="描述")
+
+
 class AddUiElementDataForm(pydanticBaseModel):
     name: str = Field(..., title="名字")
     by: str = Field(..., title="定位方式")
@@ -122,15 +127,16 @@ class BaseForm(pydanticBaseModel, JsonUtil):
         if not email_to or not email_from:
             raise ValueError("选择了要邮件接收，则发件人、收件人必须有值")
 
-        # 校验发件邮箱
-        if email_from and not validators.email(email_from.strip()):
-            raise ValueError(f"发件人邮箱【{email_from}】格式错误")
-
-        # 校验收件邮箱
-        for mail in email_to:
-            mail = mail.strip()
-            if mail and not validators.email(mail):
-                raise ValueError(f"收件人邮箱【{mail}】格式错误")
+        # 改为选用户后，不校验邮箱格式
+        # # 校验发件邮箱
+        # if email_from and not validators.email(email_from.strip()):
+        #     raise ValueError(f"发件人邮箱【{email_from}】格式错误")
+        #
+        # # 校验收件邮箱
+        # for mail in email_to:
+        #     mail = mail.strip()
+        #     if mail and not validators.email(mail):
+        #         raise ValueError(f"收件人邮箱【{mail}】格式错误")
 
     def validate_func(self, func_container: dict, content: str, message=""):
 
