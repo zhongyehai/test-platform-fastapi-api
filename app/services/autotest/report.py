@@ -62,13 +62,11 @@ async def notify_report(request: Request, form: schema.NotifyReportForm):
             email_server = await Config.filter(name=task_dict["email_server"]).first().values("value")
             task_dict["email_server"] = email_server["value"]
             email_from = await User.filter(id=task_dict["email_from"]).first().values("email", "email_password")
-            task_dict["email_from"], task_dict["email_pwd"] = email_from["email"], email_from[
-                "email_password"]
+            task_dict["email_from"], task_dict["email_pwd"] = email_from["email"], email_from["email_password"]
             email_to = await User.filter(id__in=task_dict["email_to"]).all().values("email")
             task_dict["email_to"] = [email["email"] for email in email_to]
         else:  # 解析并组装webhook地址并加签
-            task_dict["webhook_list"] = await WebHook.get_webhook_list(
-                task_dict["receive_type"], task_dict["webhook_list"])
+            task_dict["webhook_list"] = await WebHook.get_webhook_list(task_dict["receive_type"], task_dict["webhook_list"])
 
         if form.notify_to != 'default':
             task_dict["is_send"] = SendReportTypeEnum.ALWAYS.value  # 手动触发发送通知的，且选择的通知渠道不是任务设置的，不管结果如何都通知
@@ -81,8 +79,9 @@ async def notify_report(request: Request, form: schema.NotifyReportForm):
         if res is True:
             await report_model.filter(id=form.id).update(notified=True)
             return request.app.success("触发通知成功")
-        return request.app.fail("通知失败，请检查通知渠道设置")
-    return request.app.fail("当前报告不符合触发通知条件")
+        elif res is False:
+            return request.app.fail("通知失败，请检查通知渠道设置")
+    return request.app.fail("当前报告不符合任务设置的触发通知条件")
 
 
 async def get_report_suite_list(request: Request, form: schema.GetReportCaseSuiteListForm = Depends()):

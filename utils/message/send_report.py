@@ -71,11 +71,12 @@ async def send_report(**kwargs):
     """ 发送测试报告 """
     is_send, receive_type, content_list = kwargs.get("is_send"), kwargs.get("receive_type"), kwargs.get("content_list")
     result = [content_data["report_summary"]["result"] for content_data in content_list]
-    if is_send == SendReportTypeEnum.ALWAYS.value or (is_send == SendReportTypeEnum.ON_FAIL.value and "fail" in result):
+    if (is_send == SendReportTypeEnum.ALWAYS.value
+            or (is_send == SendReportTypeEnum.ON_FAIL.value and "fail" in result)
+            or (is_send == SendReportTypeEnum.ON_SUCCESS.value and "fail" not in result)):
         logger.info(f'开始发送测试报告')
         if receive_type == ReceiveTypeEnum.EMAIL.value:
             return send_inspection_by_email(content_list, kwargs)
-            # Thread(target=send_inspection_by_email, args=[content_list, kwargs]).start()
         else:
             return await send_inspection_by_msg(receive_type, content_list, kwargs)
     return None

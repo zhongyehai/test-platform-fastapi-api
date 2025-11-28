@@ -93,6 +93,7 @@ class SendReportTypeEnum(str, Enum):
     """ 发送报告方式 """
     NOT_SEND = "not_send"  # 不发送
     ALWAYS = "always"  # 始终发送
+    ON_SUCCESS = "on_success"  # 全部通过时发送
     ON_FAIL = "on_fail"  # 仅用例不通过时发送
 
 
