@@ -108,9 +108,10 @@ async def get_report_case(request: Request, form: schema.GetReportCaseForm = Dep
     return request.app.get_success(data)
 
 
-async def get_report_case_failed_list(request: Request, form: schema.GetReportForm = Depends()):
+async def get_report_rerun_case_list(request: Request, form: schema.GetReportRerunCaseForm = Depends()):
     model = ApiReportCase if request.app.test_type == "api" else AppReportCase if request.app.test_type == "app" else UiReportCase
-    case_list = await model.filter(report_id=form.id, result__not='success').all().values("case_id")
+    filters = {"result__not": "success"} if form.result == "failed" else {"result": "success"}
+    case_list = await model.filter(report_id=form.id, **filters).all().values("case_id")
     return request.app.get_success([data["case_id"] for data in case_list])
 
 

@@ -103,3 +103,8 @@ class ChangeReportStepStatus(BaseForm):
 class NotifyReportForm(GetReportForm):
     """ 通知报告 """
     notify_to: str = Field('default', title="发送渠道", description="default、ding_ding、we_chat、email")
+
+
+class GetReportRerunCaseForm(GetReportForm):
+    """ 获取报告 """
+    result: str = Field('failed', title="执行结果", description="用例的执行结果，用于重跑，failed、pass")

@@ -15,7 +15,7 @@ report_router.add_get_route("/case-list", service.get_report_case_list, auth=Fal
 report_router.add_get_route("/suite-list", service.get_report_suite_list, auth=False, summary="获取报告的用例集列表")
 report_router.add_get_route("/case", service.get_report_case, auth=False, summary="获取报告的用例数据")
 report_router.add_get_route(
-    "/case-failed", service.get_report_case_failed_list, auth=False, summary="获取失败的用例id")
+    "/rerun-case", service.get_report_rerun_case_list, auth=False, summary="获取此报告下指定结果的用例id")
 report_router.add_get_route("/step-list", service.get_report_step_list, auth=False, summary="获取报告的步骤列表")
 report_router.add_get_route("/step", service.get_report_step, auth=False, summary="获取报告的步骤数据")
 report_router.add_put_route(
