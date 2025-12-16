@@ -38,7 +38,8 @@ class AddAppiumServerDataForm(BaseForm):
     os: str = Field(..., title="服务器系统类型")
     ip: str = Field(..., title="服务器ip地址")
     port: str = Field(..., title="服务器端口")
-    
+    appium_version: str = Field(..., title="服务器端口")
+
 class AddServerForm(BaseForm):
     """ 添加服务器的校验 """
     data_list: List[AddAppiumServerDataForm] = Field(..., title="appium服务器")

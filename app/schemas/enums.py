@@ -42,6 +42,11 @@ class ApiBodyTypeEnum(str, Enum):
     URLENCODED = "urlencoded"
 
 
+class AppiumVersionEnum(str, Enum):
+     version1 = "1.x"
+     version2 = "2.x"
+     version3 = "3.x"
+
 class CaseStatusEnum(int, Enum):
     """ 测试用例状态 """
     NOT_DEBUG_AND_NOT_RUN = 0  # 未调试-不执行
@@ -109,6 +114,7 @@ class TriggerTypeEnum(str, Enum):
     PIPELINE = "pipeline"  # 流水线
     PAGE = "page"  # 页面
     CRON = "cron"  # 定时任务
+
 
 class TodoListEnum(str, Enum):
     """ 待办枚举 """

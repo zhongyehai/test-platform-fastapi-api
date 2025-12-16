@@ -20,8 +20,8 @@
 ## Python版本：python => 3.11+
 
 ### 1.安装依赖包，推荐清华源：
-
-    sudo pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+    pip install uv;uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+    pip install uv && uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 ### 2.创建MySQL数据库
 

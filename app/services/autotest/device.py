@@ -11,7 +11,7 @@ module_router = APIRouter()
 async def get_server_list(request: Request, form: schema.GetServerListForm = Depends()):
     get_filed = ["id", "name",  "status"]
     if form.detail:
-        get_filed.extend(["os", "ip", "port"])
+        get_filed.extend(["os", "ip", "port", "appium_version"])
     query_data = await form.make_pagination(Server, get_filed=get_filed)
     return request.app.get_success(data=query_data)
 

@@ -89,11 +89,12 @@ class Runner:
                 self.driver = await get_web_driver(driver_type="app", **self.appium_config)
 
     def try_close_browser(self):
-        """ 强制关闭浏览器 """
+        """ 强制关闭浏览器、app """
+        # 可能出现没有获取到driver的情况
         try:
-            self.driver.close_browser()
-        except Exception:
-            pass
+            self.driver.close_all()
+        except Exception as e:
+            print(f"try_close_browser 错误：{e}")
 
     # def __del__(self):
     #     if self.testcase_teardown_hooks:

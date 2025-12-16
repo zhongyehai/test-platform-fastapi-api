@@ -662,15 +662,17 @@ class GetUiDriver(Actions):
         self.driver = self.get_driver()
         super().__init__(self.driver)
 
-    def close_browser(self):
+    def close_all(self):
         try:
             self.driver.close()
-        except:
-            pass
+            print("页面 关闭成功")
+        except Exception as e:
+            print(f"页面 关闭失败：{e}")
         try:
             self.driver.quit()
-        except:
-            pass
+            print("浏览器 关闭成功")
+        except Exception as e:
+            print(f"浏览器 关闭失败：{e}")
 
     def get_driver(self):
         """ 获取浏览器实例 """
@@ -740,19 +742,20 @@ class GetAppDriver(Actions):
         }
         """
 
-        self.host, self.port = kwargs.pop('host'), kwargs.pop('port')
+        self.host, self.port, self.remote_path = kwargs.pop('host'), kwargs.pop('port'), kwargs.pop('remote_path')
         try:
-            self.appium_webdriver = appium_webdriver.Remote(f'http://{self.host}:{self.port}/wd/hub', kwargs)  # 启动app
+            self.appium_webdriver = appium_webdriver.Remote(f'http://{self.host}:{self.port}{self.remote_path}', kwargs)  # 启动app
         except Exception as error:
             # TODO 根据异常，做对应的处理，服务器连不上、没有链接设备、设备系统版本不一致...
             raise error
         super().__init__(self.appium_webdriver)
 
-    # def __del__(self):
-    #     try:
-    #         self.appium_webdriver.close_app()
-    #     except:
-    #         pass
+    def close_all(self):
+        try:
+            self.appium_webdriver.quit()
+            print("app 关闭成功")
+        except Exception as e:
+            print(f"app 关闭失败：{e}")
 
 
 async def get_web_driver(driver_type, **kwargs):
