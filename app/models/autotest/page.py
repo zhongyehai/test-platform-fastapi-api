@@ -45,6 +45,7 @@ class ApiMsg(BaseApi):
         DataStatusEnum, default=DataStatusEnum.ENABLE, description="此接口状态，对应swagger的废弃状态, enable/disable")
     use_count = fields.IntField(default=0, description="被引用次数，即多少个步骤直接使用了此接口")
     mock_response = fields.JSONField(default={}, comment="mock响应对象，用于前端提前对接后端进行调试")
+    source_id = fields.IntField(null=True, description="拉取数据来源的id")
 
     class Meta:
         table = "api_test_api"

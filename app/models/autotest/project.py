@@ -44,9 +44,12 @@ class BaseProject(BaseModel):
 class ApiProject(BaseProject):
     """ 服务表 """
 
-    swagger = fields.CharField(255, null=True, description="服务对应的swagger地址")
     last_pull_status = fields.IntField(
-        null=True, default=1, description="最近一次swagger拉取状态，0拉取失败，1未拉取，2拉取成功")
+        null=True, default=1, description="最近一次拉取状态，0拉取失败，1未拉取，2拉取成功")
+    source_type = fields.CharField(255, null=True, description="服务对应的接口文档地址类型，swagger、apifox")
+    source_addr = fields.CharField(255, null=True, description="服务对应的接口文档地址")
+    source_name = fields.CharField(255, null=True, description="服务对应的接口文档中的服务名字")
+    source_id = fields.IntField(null=True, description="拉取数据来源的id")
 
     class Meta:
         table = "api_test_project"

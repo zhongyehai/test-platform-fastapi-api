@@ -18,6 +18,7 @@ class ApiModule(BaseModule):
     """ 模块表 """
 
     controller = fields.CharField(255, null=True, description="当前模块在swagger上的controller名字")
+    source_id = fields.IntField(null=True, description="拉取数据来源的id")
 
     class Meta:
         table = "api_test_module"

@@ -120,4 +120,7 @@ def get_error_msg(error):
     elif "required" in msg:  # 必传字段
         return f'{filed_name} 必传'
 
+    elif "invalid or missing URL scheme" in msg:  # url格式错误
+        return f'{filed_name} 格式错误，请填写正确的url'
+
     return msg  # 数据值验证不通过

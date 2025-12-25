@@ -2,19 +2,25 @@ import json
 import os.path
 
 import requests
+import httpx
 from fastapi import Request, Depends
 
 from utils.logs.log import logger
 from ...models.assist.model_factory import SwaggerPullLog
-from ...models.autotest.model_factory import ApiProject, ApiModule, ApiMsg
+from ...models.autotest.model_factory import ApiProject, ApiModule, ApiMsg, ApiCaseSuite
+from ...models.system.model_factory import User
+from ...models.config.model_factory import BusinessLine
 from utils.util.file_util import SWAGGER_FILE_ADDRESS, FileUtil
 from app.schemas.enums import DataStatusEnum
 from ...schemas.assist import swagger as schema
 
 
-def get_swagger_data(swagger_addr):
+async def get_swagger_data(swagger_addr):
     """ 获取swagger数据 """
-    return requests.get(swagger_addr, verify=False).json()
+    async with httpx.AsyncClient(verify=False) as client:
+        res = await client.get(swagger_addr)
+        if res.status_code == 200: return res.json()
+        raise Exception(f"获取swagger数据失败：{res.text}")
 
 
 async def get_parsed_module(module_dict, project_id, controller_name, controller_tags, options):
@@ -340,88 +346,161 @@ async def get_pull_swagger_log(request: Request, form: schema.GetPullLogForm = D
     return request.app.get_success(data=data)
 
 
+async def pull_by_apifox(addr: str, cookies: str):
+    """ 从apifox拉数据 """
+    async with httpx.AsyncClient(verify=False) as client:
+        res = await client.get(addr, headers={"cookie": cookies})
+        if res.status_code != 200:
+            raise Exception(f"获取apifox数据失败：{res.text}")
+        data_list = res.json()
+
+    common_user_id = await User.filter(account="common").first().values("id")
+    common_business_id = await BusinessLine.filter(code="common").first().values("id")
+    for project_data in data_list:
+        if project_data.get("folder") is None:  # 直接放在最外层的接口
+            continue
+        project_name = project_data["name"]
+        print(f'服务：【{project_name}】')
+
+        db_project = await ApiProject.filter(source_type="apifox", source_id=project_data["folder"]["id"]).first()
+        if db_project is None:
+            db_project = await ApiProject.create(**{
+                "name": project_name,
+                "manager": common_user_id["id"],
+                "business_id": common_business_id["id"],
+                "source_type": "apifox",
+                "source_name": project_name,
+                "source_addr": addr,
+                "source_id": project_data["folder"]["id"]
+            })
+            await ApiCaseSuite.model_create({"name": "基础用例集", "suite_type": "base", "project_id": db_project.id})
+            await ApiCaseSuite.model_create({"name": "引用用例集", "suite_type": "quote", "project_id": db_project.id})
+            await ApiCaseSuite.model_create({"name": "单接口用例集", "suite_type": "api", "project_id": db_project.id})
+            await ApiCaseSuite.model_create(
+                {"name": "流程用例集", "suite_type": "process", "project_id": db_project.id})
+            await ApiCaseSuite.model_create(
+                {"name": "造数据用例集", "suite_type": "make_data", "project_id": db_project.id})
+
+        for module_index, module_data in enumerate(project_data["children"]):
+            print(f'模块：【{module_data["name"]}】')
+            db_module = await ApiModule.filter(project_id=db_project.id, source_id=module_data["folder"]["id"]).first()
+            if db_module is None:
+                db_module = await ApiModule.create(**{
+                    "controller": module_data["name"],
+                    "name": module_data["name"],
+                    "parent": None,
+                    "project_id": db_project.id,
+                    "num": module_index,
+                    "source_id": module_data["folder"]["id"]
+                })
+
+            for api_index, api_data in enumerate(module_data["children"]):
+                print(f'接口：【{api_data["api"]}】')
+                api = await ApiMsg.filter(module_id=db_module.id, source_id=api_data["api"]["id"]).first()
+                if api is None:
+                    await ApiMsg.create(**{
+                        "name": api_data["api"]["name"],
+                        "method": api_data["api"].get("method", "POST").upper(),
+                        "addr": api_data["api"]["path"],
+                        "status": DataStatusEnum.ENABLE.value if api_data["api"]["status"] == "released" else DataStatusEnum.DISABLE.value,
+                        "time_out": 60,
+                        "num": api_index,
+                        "project_id": db_project.id,
+                        "module_id": db_module.id,
+                        "source_id": api_data["api"]["id"]
+                    })
+
+
 async def pull_swagger(request: Request, form: schema.SwaggerPullForm):
     """ 根据指定服务的swagger拉取所有数据 """
     # options: ['controller_name', 'api_name', 'headers', 'query', 'json', 'form', 'response']
     options, module_dict = form.options, {}
     project = await ApiProject.validate_is_exist("服务不存在", id=form.project_id)
-    pull_log = await SwaggerPullLog.model_create({"project_id": project.id, "pull_args": options}, request.state.user)
-    swagger_data = {}
-    try:
-        swagger_data = get_swagger_data(project.swagger)  # swagger数据
-        status = swagger_data.get("status")
-        if status and status >= 400:
+    pull_log = await SwaggerPullLog.model_create({"project_id": project.id, "pull_args": options, "desc": form.cookies},
+                                                 request.state.user)
+    if form.cookies:  # apifox
+        try:
+            await pull_by_apifox(project.source_addr, form.cookies)
+        except Exception as error:
+            await pull_log.pull_fail(project, error.args)
+            return request.app.fail(f"apifox数据拉取报错，结果为: \n{error.args}")
+    else:  # swagger
+        swagger_data = {}
+        try:
+            swagger_data = await get_swagger_data(project.source_addr)  # swagger数据
+            status = swagger_data.get("status")
+            if status and status >= 400:
+                await pull_log.pull_fail(project, swagger_data)
+                return request.app.fail(f"swagger数据拉取失败，响应结果为: \n{swagger_data}")
+        except Exception as error:
             await pull_log.pull_fail(project, swagger_data)
-            return request.app.fail(f"swagger数据拉取失败，响应结果为: \n{swagger_data}")
-    except Exception as error:
-        await pull_log.pull_fail(project, swagger_data)
-        return request.app.fail(f"swagger数据拉取报错，结果为: \n{error.args}")
-    await pull_log.pull_success(project)
+            return request.app.fail(f"swagger数据拉取报错，结果为: \n{error.args}")
+        await pull_log.pull_success(project)
 
-    # 解析已有的controller描述
-    controller_tags = {tag["name"]: tag.get("description", tag["name"]) for tag in swagger_data.get("tags", [])}
+        # 解析已有的controller描述
+        controller_tags = {tag["name"]: tag.get("description", tag["name"]) for tag in swagger_data.get("tags", [])}
 
-    add_api_list = []
-    for api_addr, api_data in swagger_data["paths"].items():
-        for api_method, swagger_api in api_data.items():
-            # 处理模块
-            controller_name = swagger_api.get("tags")[0] if swagger_api.get("tags") else "默认分组"
-            module = await get_parsed_module(module_dict, project.id, controller_name, controller_tags, options)
+        add_api_list = []
+        for api_addr, api_data in swagger_data["paths"].items():
+            for api_method, swagger_api in api_data.items():
+                # 处理模块
+                controller_name = swagger_api.get("tags")[0] if swagger_api.get("tags") else "默认分组"
+                module = await get_parsed_module(module_dict, project.id, controller_name, controller_tags, options)
 
-            # 处理接口
-            request.app.logger.info(f"解析接口地址：{api_addr}")
-            request.app.logger.info(f"解析接口数据：{swagger_api}")
-            api_template = {
-                "status": swagger_api.get("deprecated", DataStatusEnum.ENABLE),  # 没有deprecated字段说明没有被废弃
-                "project_id": project.id,
-                "module_id": module.id,
-                "method": api_method.upper(),
-                "addr": api_addr,
-                "body_type": "json"
-            }
+                # 处理接口
+                request.app.logger.info(f"解析接口地址：{api_addr}")
+                request.app.logger.info(f"解析接口数据：{swagger_api}")
+                api_template = {
+                    "status": swagger_api.get("deprecated", DataStatusEnum.ENABLE),  # 没有deprecated字段说明没有被废弃
+                    "project_id": project.id,
+                    "module_id": module.id,
+                    "method": api_method.upper(),
+                    "addr": api_addr,
+                    "body_type": "json"
+                }
 
-            # 根据接口地址 获取/实例化 接口对象
-            if "{" in api_addr:  # URL中可能有参数化"/XxXx/xx/{batchNo}"
-                split_api_addr = api_addr.split("{")[0]
-                db_api = await ApiMsg.filter(addr__icontains=split_api_addr, module_id=module.id).first() or ApiMsg()
-                if db_api.id and "$" in db_api.addr:  # 已经在测试平台修改过接口地址的路径参数
-                    api_msg_addr_split = db_api.addr.split("$")
-                    api_msg_addr_split[0] = split_api_addr
-                    api_template["addr"] = "$".join(api_msg_addr_split)
-            else:
-                db_api = await ApiMsg.filter(addr=api_addr, module_id=module.id).first() or ApiMsg()
+                # 根据接口地址 获取/实例化 接口对象
+                if "{" in api_addr:  # URL中可能有参数化"/XxXx/xx/{batchNo}"
+                    split_api_addr = api_addr.split("{")[0]
+                    db_api = await ApiMsg.filter(addr__icontains=split_api_addr,
+                                                 module_id=module.id).first() or ApiMsg()
+                    if db_api.id and "$" in db_api.addr:  # 已经在测试平台修改过接口地址的路径参数
+                        api_msg_addr_split = db_api.addr.split("$")
+                        api_msg_addr_split[0] = split_api_addr
+                        api_template["addr"] = "$".join(api_msg_addr_split)
+                else:
+                    db_api = await ApiMsg.filter(addr=api_addr, module_id=module.id).first() or ApiMsg()
 
-            # swagger2和openapi3格式不一样，处理方法不一样
-            if "2" in swagger_data.get("swagger", ""):  # swagger2
-                content_type = swagger_api.get("consumes", ["json"])[0]  # 请求数据类型
-                parse_swagger2_args(db_api, swagger_api, swagger_data, options)  # 处理参数
-            # elif "3" in swagger_data.get("openapi", ""):  # openapi 3
-            else:  # openapi 3
-                content_types = swagger_api.get("requestBody", {}).get("content", {"application/json": ""})
-                content_type = list(content_types.keys())[0]
-                data_models = swagger_data.get("components", {}).get("schemas", {})
-                parse_openapi3_args(db_api, swagger_api, data_models, options)  # 处理参数
+                # swagger2和openapi3格式不一样，处理方法不一样
+                if "2" in swagger_data.get("swagger", ""):  # swagger2
+                    content_type = swagger_api.get("consumes", ["json"])[0]  # 请求数据类型
+                    parse_swagger2_args(db_api, swagger_api, swagger_data, options)  # 处理参数
+                # elif "3" in swagger_data.get("openapi", ""):  # openapi 3
+                else:  # openapi 3
+                    content_types = swagger_api.get("requestBody", {}).get("content", {"application/json": ""})
+                    content_type = list(content_types.keys())[0]
+                    data_models = swagger_data.get("components", {}).get("schemas", {})
+                    parse_openapi3_args(db_api, swagger_api, data_models, options)  # 处理参数
 
-            # 处理请求参数类型
-            api_template["body_type"] = get_request_body_type(content_type)
+                # 处理请求参数类型
+                api_template["body_type"] = get_request_body_type(content_type)
 
-            # 新的接口则赋值
-            for key, value in api_template.items():
-                if hasattr(db_api, key):
-                    setattr(db_api, key, value)
+                # 新的接口则赋值
+                for key, value in api_template.items():
+                    if hasattr(db_api, key):
+                        setattr(db_api, key, value)
 
-            if db_api.id is None:  # 没有id，则为新增
-                db_api.name = swagger_api.get("summary", "接口未命名")
-                add_api_list.append(db_api)
-            else:
-                if 'api_name' in options:  # 用户选择了要更新接口名字
+                if db_api.id is None:  # 没有id，则为新增
                     db_api.name = swagger_api.get("summary", "接口未命名")
+                    add_api_list.append(db_api)
+                else:
+                    if 'api_name' in options:  # 用户选择了要更新接口名字
+                        db_api.name = swagger_api.get("summary", "接口未命名")
 
-    await ApiMsg.bulk_create(add_api_list)  # 批量插入接口
+        await ApiMsg.bulk_create(add_api_list)  # 批量插入接口
 
-    # 同步完成后，保存原始数据
-    swagger_file = os.path.join(SWAGGER_FILE_ADDRESS, f"{project.id}.json")
-    FileUtil.delete_file(swagger_file)
-    FileUtil.save_file(swagger_file, swagger_data)
-
+        # 同步完成后，保存原始数据
+        swagger_file = os.path.join(SWAGGER_FILE_ADDRESS, f"{project.id}.json")
+        FileUtil.delete_file(swagger_file)
+        FileUtil.save_file(swagger_file, swagger_data)
     return request.app.success("数据拉取并更新完成")

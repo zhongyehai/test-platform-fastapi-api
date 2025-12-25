@@ -17,7 +17,7 @@ async def get_report_list(request: Request, form: schema.FindReportForm = Depend
     if form.detail:
         get_filed.extend([
             "create_time", "trigger_type", "env", "is_passed", "process", "status", "create_user", "project_id",
-            "trigger_id", "run_type", "notified"
+            "trigger_id", "run_type", "notified", "retry_count"
         ])
 
     query_data = await form.make_pagination(model, get_filed=get_filed)
@@ -109,10 +109,19 @@ async def get_report_case(request: Request, form: schema.GetReportCaseForm = Dep
 
 
 async def get_report_rerun_case_list(request: Request, form: schema.GetReportRerunCaseForm = Depends()):
-    model = ApiReportCase if request.app.test_type == "api" else AppReportCase if request.app.test_type == "app" else UiReportCase
+    report_model, report_case_model, report_step_model = ApiReport, ApiReportCase, ApiReportStep
+    if request.app.test_type == "app":
+        report_model, report_case_model, report_step_model = AppReport, AppReportCase, AppReportStep
+    elif request.app.test_type == "ui":
+        report_model, report_case_model, report_step_model = UiReport, UiReportCase, UiReportStep
+
     filters = {"result__not": "success"} if form.result == "failed" else {"result": "success"}
-    case_list = await model.filter(report_id=form.id, **filters).all().values("case_id")
-    return request.app.get_success([data["case_id"] for data in case_list])
+    report = await report_model.filter(id=form.id).first().values("run_type")
+    if report["run_type"] == "api":  # 如果是跑接口产生的，需要查 report_step 的 element_id
+        data_list = await report_step_model.filter(report_id=form.id, **filters).all().values_list("element_id", flat=True)
+    else:
+        data_list = await report_case_model.filter(report_id=form.id, **filters).all().values_list("case_id", flat=True)
+    return request.app.get_success(data_list)
 
 
 async def get_report_step_list(request: Request, form: schema.GetReportStepListForm = Depends()):

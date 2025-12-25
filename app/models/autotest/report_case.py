@@ -15,6 +15,7 @@ class BaseReportCase(BaseModel):
     result = fields.CharField(
         128, default='waite',
         description="步骤测试结果，waite：等待执行、running：执行中、fail：执行不通过、success：执行通过、skip：跳过、error：报错")
+    retry_count = fields.IntField(default=0, description="已经执行重试的次数")
     case_data = fields.JSONField(default={}, description="用例的数据")
     summary = fields.JSONField(default={}, description="用例的报告统计")
     error_msg = fields.TextField(default='', description="用例错误信息")
@@ -68,8 +69,7 @@ class BaseReportCase(BaseModel):
         """ 根据报告id，获取用例列表，性能考虑，只查关键字段 """
         query_fields = ["id", "case_id", "suite_id", "name", "result"]  # 执行进度展示
         if get_detail:
-            query_fields.extend(["summary"])  # 报告展示
-            # query_fields.extend(["summary", "case_data", "error_msg"])  # 报告展示
+            query_fields.extend(["summary", "retry_count"])  # 报告展示
 
         filter_dict = {"report_id": report_id, "suite_id": suite_id} if suite_id else {"report_id": report_id}
         return await cls.filter(**filter_dict).values(*query_fields)  # 报告展示，根据用例集id查
@@ -98,6 +98,7 @@ class BaseReportCase(BaseModel):
                     "id": report_case.suite_id,
                     "name": report_case.name,
                     "result": [report_case.result],
+                    "retry_count": 0,
                     "children": []
                 }
                 continue
@@ -134,6 +135,7 @@ class BaseReportCase(BaseModel):
                 "id": resport_case_list[0]["suite_id"],
                 "name": resport_case_list[0]["name"],
                 "result": resport_case_list[0]["result"],
+                "retry_count": 0,
                 "children": []
             }]
         resport_step_list = await report_step_model.get_resport_step_list_by_report(report_id)
@@ -141,6 +143,7 @@ class BaseReportCase(BaseModel):
             for resport_case_index, resport_case_item in enumerate(resport_case_list):
                 if resport_case_item["suite_id"] == suite_item["id"]:
                     resport_case_item["children"] = []
+                    suite_item["retry_count"] += resport_case_item["retry_count"]
                     for resport_step_index, resport_step_item in enumerate(resport_step_list):
                         if resport_step_item["report_case_id"] == resport_case_item["id"]:
                             resport_case_item["children"].append(resport_step_item)

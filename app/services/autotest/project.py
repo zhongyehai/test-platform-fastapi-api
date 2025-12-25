@@ -15,7 +15,7 @@ async def get_project_list(request: Request, form: schema.FindProjectListForm = 
     if form.detail:
         get_filed.extend(["manager", "update_user"])
         if request.app.test_type == "api":
-            get_filed.extend(["swagger", "last_pull_status"])
+            get_filed.extend(["source_type", "source_addr", "last_pull_status"])
         elif request.app.test_type == "app":
             get_filed.extend(["app_package"])
 
@@ -53,6 +53,7 @@ async def add_project(request: Request, form: schema.AddProjectForm):
 
 
 async def change_project(request: Request, form: schema.EditProjectForm):
+    await form.validate_request()
     project_model = ApiProject if request.app.test_type == "api" else AppProject if request.app.test_type == "app" else UiProject
     data = form.get_update_data(request.state.user.id)
     if request.app.test_type != "app":
@@ -60,7 +61,11 @@ async def change_project(request: Request, form: schema.EditProjectForm):
         data.pop("app_activity")
         data.pop("template_device")
     if request.app.test_type != "api":
-            data.pop("swagger")
+            data.pop("source_type")
+            data.pop("source_addr")
+            data.pop("source_name")
+            data.pop("source_id")
+
     await project_model.filter(id=form.id).update(**data)
     return request.app.put_success()
 

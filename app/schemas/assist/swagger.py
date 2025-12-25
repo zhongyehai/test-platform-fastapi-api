@@ -1,4 +1,6 @@
+from typing import Optional
 from pydantic import Field
+
 from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 
@@ -21,3 +23,4 @@ class SwaggerPullForm(BaseForm):
     """ 查找swagger拉取记录列表form """
     project_id: int = Field(..., title='服务id')
     options: list = Field(..., title='拉取项')
+    cookies: Optional[str] = Field(None, title='拉取数据要用到的cookies')

@@ -1,5 +1,5 @@
 from typing import Optional, Union, List
-from pydantic import Field
+from pydantic import Field, AnyUrl
 import validators
 
 from ...models.system.model_factory import User
@@ -45,8 +45,11 @@ class AddProjectForm(BaseForm):
     name: str = Field(..., min_length=1, max_length=255, title="服务名")
     manager: int = Field(..., title="负责人")
     business_id: int = Field(..., title="业务线")
-    swagger: Optional[str] = Field(title="swagger地址")
     script_list: Optional[list] = Field(title="要使用的脚本")
+
+    # api自动化测试
+    source_type: Optional[str] = Field(title="服务对应的接口文档地址类型，swagger、apifox")
+    source_addr: Optional[AnyUrl] = Field(title="服务对应的接口文档地址")
 
     # app自动化测试
     app_package: Optional[str] = Field(title="app包名")
@@ -54,24 +57,22 @@ class AddProjectForm(BaseForm):
     template_device: Optional[str] = Field(title="元素定位时参照的设备id")
 
 
-    def validate_swagger(self):
-        """ 校验swagger地址 """
-        if self.swagger:
-            self.validate_is_true(f"swagger地址不正确，请输入正确地址", validators.url(self.swagger) is True)
+    def validate_source_addr(self):
+        """ 校验接口文档地址 """
+        if self.source_addr:
             self.validate_is_true(
-                f"swagger地址不正确，请输入获取swagger数据的地址，不要输入swagger-ui地址",
-                "swagger-ui.htm" not in self.swagger
+                f"接口文档地址不正确，请输入获取接口文档数据的地址，不要输入页面地址", "swagger-ui.htm" not in self.source_addr
             )
 
     async def validate_request(self, *args, **kwargs):
-        self.validate_swagger()
+        self.validate_source_addr()
 
 
 class EditProjectForm(GetProjectForm, AddProjectForm):
     """ 修改服务参数校验 """
 
     async def validate_request(self, *args, **kwargs):
-        self.validate_swagger()
+        self.validate_source_addr()
 
 
 class GetEnvForm(BaseForm):

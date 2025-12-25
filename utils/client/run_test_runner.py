@@ -2,6 +2,8 @@ import copy
 import types
 import importlib
 
+from tortoise.expressions import F
+
 from app.models.autotest.model_factory import ApiProject, ApiProjectEnv, ApiCaseSuite, ApiCase, ApiStep, ApiMsg, \
     ApiReport, ApiReportCase, ApiReportStep, UiProject, UiProjectEnv, UiElement, UiCaseSuite, UiCase, UiStep, UiReport, \
     UiReportCase, UiReportStep, AppProject, AppProjectEnv, AppElement, AppCaseSuite, AppCase, AppStep, AppReport, \
@@ -269,7 +271,8 @@ class RunTestRunner:
                 update_report_case = await self.report_case_model.filter(report_id=self.insert_to, case_id=case_id).first().values("id")
                 await self.report_case_model.filter(report_id=self.insert_to, case_id=case_id).update(
                     result=current_report_case.result, case_data=current_report_case.case_data,
-                    summary=current_report_case.summary, error_msg=current_report_case.error_msg
+                    summary=current_report_case.summary, error_msg=current_report_case.error_msg,
+                    retry_count=F("retry_count") + 1,  # 重跑次数+1
                 )
 
                 # 插入report_step
@@ -292,7 +295,10 @@ class RunTestRunner:
             update_summary["summary"]["stat"]["test_case"]["success"] += self.report.summary["stat"]["test_case"]["success"]
             update_summary["summary"]["result"] = self.report.summary["result"]  # 更新测试结果
             await self.report_model.filter(id=self.insert_to).update(
-                summary=update_summary["summary"], is_passed=self.report.is_passed, notified=False  # 状态更新后未通知
+                summary=update_summary["summary"],
+                is_passed=self.report.is_passed,
+                retry_count=F("retry_count") + 1,  # 重跑次数+1
+                notified=False,  # 状态更新后未通知
             )
 
     async def run_case(self):
