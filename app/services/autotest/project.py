@@ -17,7 +17,7 @@ async def get_project_list(request: Request, form: schema.FindProjectListForm = 
         if request.app.test_type == "api":
             get_filed.extend(["source_type", "source_addr", "last_pull_status"])
         elif request.app.test_type == "app":
-            get_filed.extend(["app_package"])
+            get_filed.extend(["app_package", "template_device"])
 
     query_data = await form.make_pagination(project_model, user=request.state.user, get_filed=get_filed)
     return request.app.get_success(data=query_data)

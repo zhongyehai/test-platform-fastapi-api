@@ -131,12 +131,13 @@ async def change_api(request: Request, form: schema.EditApiForm):
 
 
 async def delete_api(request: Request, form: schema.DeleteApiForm):
-    step = await Step.filter(api_id=form.id).first().values("case_id")
+    step = await Step.filter(api_id__in=form.id_list).first().values("api_id", "case_id")
     if step and step.get("case_id"):
         case_name = await Case.filter(id=step.get("case_id")).first().values("name")
-        raise ValueError(f"用例【{case_name['name']}】已引用此接口，请先解除引用")
+        api_name = await Api.filter(id=step.get("api_id")).first().values("name")
+        raise ValueError(f"接口【{api_name['name']}】已被用例【{case_name['name']}】引用，请先解除引用")
 
-    await Api.filter(id=form.id).delete()
+    await Api.filter(id__in=form.id_list).delete()
     return request.app.delete_success()
 
 

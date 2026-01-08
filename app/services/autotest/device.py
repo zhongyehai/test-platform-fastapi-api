@@ -23,6 +23,7 @@ async def change_server_sort(request: Request, form: schema.ChangeSortForm):
 
 async def copy_server(request: Request, form: schema.GetServerForm):
     server = await Server.validate_is_exist("服务器不存在", id=form.id)
+    server.name = server.name + "_copy"
     new_server = await server.copy()
     return request.app.success("复制成功", data=new_server)
 
@@ -78,6 +79,7 @@ async def change_phone_sort(request: Request, form: schema.ChangeSortForm):
 
 async def copy_phone(request: Request, form: schema.GetPhoneForm):
     phone = await Phone.validate_is_exist("运行设备不存在", id=form.id)
+    phone.name = phone.name + "_copy"
     new_phone = await phone.copy()
     return request.app.success("复制成功", data=new_phone)
 

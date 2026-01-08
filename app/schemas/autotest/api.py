@@ -41,8 +41,9 @@ class GetApiFromForm(BaseForm):
         self.validate_is_true("请传入接口地址或接口id", self.id or self.api_addr)
 
 
-class DeleteApiForm(GetApiForm):
+class DeleteApiForm(BaseForm):
     """ 删除接口 """
+    id_list: List[int] = Field(..., title="接口id list")
 
 
 class AddApiForm(BaseForm):
