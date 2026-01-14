@@ -262,7 +262,6 @@ class RunCase(RunTestRunner):
                 if self.run_type == 'ui':
                     # 用例格式模板, # 火狐：geckodriver
                     report_case_data["browser_type"] = self.browser
-                    report_case_data["browser_path"] = FileUtil.get_driver_path(self.browser)
                 else:
                     report_case_data["appium_config"] = self.appium_config
 

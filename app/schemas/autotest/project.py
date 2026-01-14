@@ -3,7 +3,7 @@ from pydantic import Field, AnyUrl
 import validators
 
 from ...models.system.model_factory import User
-from ..base_form import BaseForm, PaginationForm, ValidateModel, HeaderModel, ChangeSortForm
+from ..base_form import BaseForm, PaginationForm, ValidateModel, ParamModel, ChangeSortForm
 
 
 class FindProjectListForm(PaginationForm):
@@ -86,7 +86,7 @@ class EditEnvForm(GetEnvForm):
     id: int = Field(..., title="环境数据id")
     host: str = Field(..., title="域名")
     variables: List[ValidateModel] = Field(title="变量")
-    headers: Optional[List[HeaderModel]] = Field(title="头部信息")
+    headers: Optional[List[ParamModel]] = Field(title="头部信息")
 
     def validate_variables(self, all_func_name, all_variables):
         """ 公共变量参数的校验

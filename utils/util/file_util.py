@@ -21,7 +21,6 @@ TEMP_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/temp_files/"
 GIT_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/git_files/"))  # git文件存放地址
 SWAGGER_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/swagger_files/"))  # swagger文件存放地址
 DB_BACK_UP_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/db_back_up_files/"))  # 数据库备份地址
-BROWSER_DRIVER_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/browser_drivers/"))  # 浏览器驱动文件存放地址
 REPORT_IMG_UI_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/report_img_ui/"))  # 截图存放路径
 REPORT_IMG_APP_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/report_img_app/"))  # 截图存放路径
 
@@ -40,7 +39,7 @@ def _check_file_path(paths):
 _check_file_path([
     LOG_ADDRESS, SCRIPT_ADDRESS, DIFF_RESULT, CASE_FILE_ADDRESS, UI_CASE_FILE_ADDRESS,
     MOCK_DATA_ADDRESS, CALL_BACK_ADDRESS, TEMP_FILE_ADDRESS, GIT_FILE_ADDRESS, DB_BACK_UP_ADDRESS, SWAGGER_FILE_ADDRESS,
-    BROWSER_DRIVER_ADDRESS, REPORT_IMG_UI_ADDRESS, REPORT_IMG_APP_ADDRESS
+    REPORT_IMG_UI_ADDRESS, REPORT_IMG_APP_ADDRESS
 ])
 
 
@@ -118,14 +117,6 @@ class FileUtil:
     def build_ui_test_file_path(cls, filename):
         """ 拼装UI自动化要上传文件的路径 """
         return os.path.join(UI_CASE_FILE_ADDRESS, filename)
-
-    @classmethod
-    def get_driver_path(cls, browser):
-        """ 获取浏览器驱动路径 """
-        return os.path.join(
-            BROWSER_DRIVER_ADDRESS,
-            f'{browser}driver{".exe" if "Windows" in platform.platform() else ""}'
-        )
 
     @classmethod
     def get_report_img_path(cls, report_type='ui'):

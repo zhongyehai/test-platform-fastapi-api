@@ -143,7 +143,7 @@ class BaseReportCase(BaseModel):
             for resport_case_index, resport_case_item in enumerate(resport_case_list):
                 if resport_case_item["suite_id"] == suite_item["id"]:
                     resport_case_item["children"] = []
-                    suite_item["retry_count"] += resport_case_item["retry_count"]
+                    suite_item["retry_count"] = max(resport_case_item["retry_count"], suite_item["retry_count"])
                     for resport_step_index, resport_step_item in enumerate(resport_step_list):
                         if resport_step_item["report_case_id"] == resport_case_item["id"]:
                             resport_case_item["children"].append(resport_step_item)

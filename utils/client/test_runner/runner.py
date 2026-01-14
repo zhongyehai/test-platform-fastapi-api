@@ -60,7 +60,6 @@ class Runner:
         self.redirect_print = None
         self.client_init_error = None
 
-        self.browser_driver_path = config.get("browser_path")
         self.browser_name = config.get("browser_type")
         self.appium_config = config.get("appium_config", {})
 
@@ -82,8 +81,7 @@ class Runner:
                 self.client_session = HttpSession(self.base_url)
             elif self.run_type == "ui":
                 self.client_session = WebDriverSession()
-                self.driver = await get_web_driver(
-                    driver_type="ui", browser_driver_path=self.browser_driver_path, browser_name=self.browser_name)
+                self.driver = await get_web_driver(driver_type="ui", browser_name=self.browser_name)
             else:
                 self.client_session = WebDriverSession()
                 self.driver = await get_web_driver(driver_type="app", **self.appium_config)

@@ -3,32 +3,30 @@ from fastapi import Request, UploadFile, File, Form, Depends
 from fastapi.responses import FileResponse
 
 from ...schemas.autotest import element as schema
-from ...models.autotest.model_factory import AppProject, AppModule, AppPage, AppElement, AppCase, AppStep, UiProject, \
-    UiModule, UiPage, UiElement, UiCase, UiStep, AppCaseSuite, UiCaseSuite
+from ...models.autotest.model_factory import ModelSelector
 from ...models.config.config import Config
 from utils.parse.parse_excel import parse_file_content
 from utils.util.file_util import STATIC_ADDRESS
 
 
 async def get_element_list(request: Request, form: schema.ElementListForm = Depends()):
-    model = AppElement if request.app.test_type == "app" else UiElement
-
-    get_filed = model.get_simple_filed_list()
+    models = ModelSelector(request.app.test_type)
+    get_filed = models.element.get_simple_filed_list()
     if form.detail:
         get_filed.extend(["by", "element", "wait_time_out", "page_id"])
-    query_data = await form.make_pagination(model, get_filed=get_filed)
+    query_data = await form.make_pagination(models.element, get_filed=get_filed)
     return request.app.get_success(data=query_data)
 
 
 async def change_element_sort(request: Request, form: schema.ChangeSortForm):
-    model = AppElement if request.app.test_type == "app" else UiElement
-    await model.change_sort(**form.dict(exclude_unset=True))
+    models = ModelSelector(request.app.test_type)
+    await models.element.change_sort(**form.dict(exclude_unset=True))
     return request.app.put_success()
 
 
 async def change_element_by_id(request: Request, form: schema.ChangeElementByIdForm):
-    model = AppElement if request.app.test_type == "app" else UiElement
-    await model.filter(id=form.id).update(**form.get_update_data(request.state.user.id))
+    models = ModelSelector(request.app.test_type)
+    await models.element.filter(id=form.id).update(**form.get_update_data(request.state.user.id))
     return request.app.put_success()
 
 
@@ -37,11 +35,8 @@ async def get_element_template(request: Request):
 
 
 async def element_upload(request: Request, file: UploadFile = File(), page_id: str = Form()):
-    page_model, element_model = AppPage, AppElement
-    if request.app.test_type != "app":
-        page_model, element_model = UiPage, UiElement
-
-    page = await page_model.filter(id=page_id).first()
+    models = ModelSelector(request.app.test_type)
+    page = await models.page.filter(id=page_id).first()
     if page is None:
         return request.app.fail("页面不存在")
 
@@ -55,7 +50,7 @@ async def element_upload(request: Request, file: UploadFile = File(), page_id: s
         name, by = element_data.get("元素名称"), element_data.get("定位方式")
         element, wait_time_out = element_data.get("元素表达式"), element_data.get("等待元素出现的超时时间")
         if all((name, by, element, wait_time_out)):
-            element_list.append(element_model(
+            element_list.append(models.element(
                 name=name,
                 by=option_dict[by] if by in option_dict else "id",
                 element=element,
@@ -67,60 +62,54 @@ async def element_upload(request: Request, file: UploadFile = File(), page_id: s
                 update_user=request.state.user.id
             ))
     if len(element_list) > 0:
-        await element_model.bulk_create(element_list)
+        await models.element.bulk_create(element_list)
     return request.app.success("元素导入成功")
 
 
 async def get_element_from(request: Request, form: schema.GetElementForm = Depends()):
-    project_model, module_model, page_model, element_model = AppProject, AppModule, AppPage, AppElement
-    if request.app.test_type != "app":
-        project_model, module_model, page_model, element_model = UiProject, UiModule, UiPage, UiElement
-
-    element = await element_model.validate_is_exist("元素不存在", id=form.id)
-    project = await project_model.filter(id=element.project_id).first().values("name")
-    module_name = await module_model.get_from_path(element.module_id)
-    page = await page_model.filter(id=element.page_id).first().values("name")
+    models = ModelSelector(request.app.test_type)
+    element = await models.element.element.validate_is_exist("元素不存在", id=form.id)
+    project = await models.project.filter(id=element.project_id).first().values("name")
+    module_name = await models.module.get_from_path(element.module_id)
+    page = await models.page.filter(id=element.page_id).first().values("name")
     return request.app.get_success(f'此元素归属：【{project["name"]}_{module_name}_{page["name"]}_{element.name}】')
 
 
 async def get_element_detail(request: Request, form: schema.GetElementForm = Depends()):
-    model = AppElement if request.app.test_type == "app" else UiElement
-    data = await model.filter(id=form.id).first()
+    models = ModelSelector(request.app.test_type)
+    data = await models.element.filter(id=form.id).first()
     return request.app.get_success(data)
 
 
 async def add_element(request: Request, form: schema.AddElementForm):
-    model = AppElement if request.app.test_type == "app" else UiElement
-    max_num = await model.get_max_num()
+    models = ModelSelector(request.app.test_type)
+    max_num = await models.element.get_max_num()
     data_list = [{
         "project_id": form.project_id,
         "module_id": form.module_id,
         "page_id": form.page_id,
         "num": max_num + index + 1,
         **element.dict()} for index, element in enumerate(form.element_list)]
-    await model.batch_insert(data_list, request.state.user)
+    await models.element.batch_insert(data_list, request.state.user)
     return request.app.post_success()
 
 
 async def change_element(request: Request, form: schema.EditElementForm):
-    model = AppElement if request.app.test_type == "app" else UiElement
+    models = ModelSelector(request.app.test_type)
     data = form.get_update_data(request.state.user.id)
     if request.app.test_type == "ui":
         data.pop("template_device")
-    await model.filter(id=form.id).update(**data)
+    await models.element.filter(id=form.id).update(**data)
     return request.app.put_success()
 
 
 async def delete_element(request: Request, form: schema.GetElementForm):
-    project_model, suite_model, element_model, case_model, step_model = AppProject, AppCaseSuite, AppElement, AppCase, AppStep
-    if request.app.test_type != "app":
-        project_model, suite_model, element_model, case_model, step_model = UiProject, UiCaseSuite, UiElement, UiCase, UiStep
-
-    element = await element_model.validate_is_exist("元素不存在", id=form.id)
-    step = await step_model.filter(element_id=element.id).first().values("case_id", "name")
+    models = ModelSelector(request.app.test_type)
+    element = await models.element.element.validate_is_exist("元素不存在", id=form.id)
+    step = await models.step.filter(element_id=element.id).first().values("case_id", "name")
     if step:
-        case = await case_model.filter(id=step["case_id"]).first()
-        case_from = await case.get_quote_case_from(project_model, suite_model)
+        case = await models.case.filter(id=step["case_id"]).first()
+        case_from = await case.get_quote_case_from(models.project, models.suite)
         raise ValueError(f'步骤【{case_from}/{step["name"]}】已引用此元素，请先解除引用')
 
     await element.model_delete()

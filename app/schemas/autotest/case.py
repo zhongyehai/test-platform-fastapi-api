@@ -4,7 +4,7 @@ from pydantic import Field
 
 from utils.logs.log import logger
 from ..base_form import BaseForm, PaginationForm, AddCaseDataForm, VariablesModel, SkipIfModel, \
-    HeaderModel, ChangeSortForm
+    ParamModel, ChangeSortForm
 from app.models.assist.script import Script
 from app.schemas.enums import CaseStatusEnum
 
@@ -79,7 +79,7 @@ class EditCaseForm(GetCaseForm):
     desc: str = Field(..., title="用例描述")
     skip_if: List[SkipIfModel] = Field(..., title="跳过条件")
     variables: List[VariablesModel] = Field(..., title="变量")
-    headers: Optional[List[HeaderModel]] = Field(..., title="头部信息")
+    headers: Optional[List[ParamModel]] = Field(..., title="头部信息")
     run_times: int = Field(1, title="运行次数")
 
     def validate_variables(self, all_func_name, all_variables):

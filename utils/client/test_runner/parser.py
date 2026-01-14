@@ -604,7 +604,7 @@ async def parse_test_step(steps: list, case_config: dict, project_mapping: dict)
 
     else:  # UI 自动化
         # 用例中配置的浏览器信息
-        browser_type, browser_path = case_config.get("browser_type", ''), case_config.get("browser_path", '')
+        browser_type = case_config.get("browser_type", '')
 
         # 用例中配置变量、自定义函数
         config_variables, functions = case_config.get("variables", {}), project_mapping.get("functions", {})
@@ -614,7 +614,6 @@ async def parse_test_step(steps: list, case_config: dict, project_mapping: dict)
 
             # 把浏览器相关信息加到步骤中
             step.setdefault("browser_type", browser_type)
-            step.setdefault("browser_path", browser_path)
 
             # 处理变量本身，有变量本身就有引用变量的情况
             for key in step["variables"]:

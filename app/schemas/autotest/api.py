@@ -1,7 +1,7 @@
 from typing import Optional, Union, List
 from pydantic import Field
 
-from ..base_form import BaseForm, PaginationForm, ApiListModel, ParamModel, HeaderModel, \
+from ..base_form import BaseForm, PaginationForm, ApiListModel, ParamModel, \
     DataFormModel, ExtractModel, ValidateModel, ChangeSortForm
 from app.schemas.enums import ApiMethodEnum, DataStatusEnum, ApiBodyTypeEnum
 
@@ -61,7 +61,7 @@ class EditApiForm(GetApiForm):
     desc: Optional[str] = Field(title="备注")
     method: ApiMethodEnum = Field(..., title="请求方法")
     addr: str = Field(..., title="接口地址")
-    headers: List[HeaderModel] = Field(title="头部信息")
+    headers: List[ParamModel] = Field(title="头部信息")
     params: List[ParamModel] = Field(title="url参数")
     body_type: ApiBodyTypeEnum = Field(..., title="请求体数据类型", description="json/form/text/urlencoded")
     data_form: List[DataFormModel] = Field(title="data-form参数")

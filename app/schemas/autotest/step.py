@@ -1,7 +1,7 @@
 from typing import Optional, Union, List
 from pydantic import Field
 
-from ..base_form import BaseForm, PaginationForm, ExtractModel, ValidateModel, HeaderModel, ParamModel, \
+from ..base_form import BaseForm, PaginationForm, ExtractModel, ValidateModel, ParamModel, \
     DataFormModel, SkipIfModel, ChangeSortForm
 from app.schemas.enums import ApiBodyTypeEnum, DataStatusEnum
 
@@ -59,7 +59,7 @@ class AddStepForm(BaseForm):
 
     # 接口自动化
     api_id: Optional[int] = Field(None, title="步骤对应的接口id（步骤为接口时必传）")
-    headers: Optional[List[HeaderModel]] = Field(None, title="跳过条件")
+    headers: Optional[List[ParamModel]] = Field(None, title="跳过条件")
     params: Optional[List[ParamModel]] = Field(None, title="查询字符串参数")
     body_type: ApiBodyTypeEnum = Field(
         ApiBodyTypeEnum.JSON.value, title="请求体数据类型", description="json/form/text/urlencoded")

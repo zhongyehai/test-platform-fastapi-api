@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import time
 import json
 import base64
@@ -20,6 +21,8 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 
 from .utils import get_dict_data
 
@@ -653,11 +656,10 @@ class Actions:
 class GetUiDriver(Actions):
     """ 浏览器对象管理 """
 
-    def __init__(self, browser_driver_path: str, browser_name: str):
+    def __init__(self, browser_name: str):
         """ 实例化浏览器对象
         browser_driver_path: 浏览器驱动地址
         """
-        self.browser_driver_path = browser_driver_path
         self.browser_name = browser_name
         self.driver = self.get_driver()
         super().__init__(self.driver)
@@ -706,7 +708,7 @@ class GetUiDriver(Actions):
         """
         if platform.platform().startswith('Linux'):
             chrome_options.add_argument('--headless')
-        return webdriver.Chrome(executable_path=self.browser_driver_path, chrome_options=chrome_options)
+        return webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=chrome_options)
 
     def gecko(self):
         """ 火狐浏览器 """
@@ -724,7 +726,7 @@ class GetUiDriver(Actions):
         firefox_options.add_argument('--headless')
         firefox_options.add_argument('--no-sandbox')
         firefox_options.add_argument('--disable-dev-shm-usage')
-        return webdriver.Firefox(executable_path=self.browser_driver_path, firefox_profile=firefox_options)
+        return webdriver.Firefox(executable_path=GeckoDriverManager().install(), firefox_profile=firefox_options)
 
 
 class GetAppDriver(Actions):
@@ -775,6 +777,5 @@ async def get_web_driver(driver_type, **kwargs):
 if __name__ == '__main__':
     # print(Driver.get_action_mapping())
     # print(Driver.get_assert_mapping())
-    driver_path = r'D:\项目\test-platform\base\api\browser_drivers\chromedriver.exe'
-    driver = GetUiDriver(driver_path, 'chrome')
+    driver = GetUiDriver('chrome')
     driver.action_01open('https://www.baidu.com/')

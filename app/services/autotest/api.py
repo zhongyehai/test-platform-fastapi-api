@@ -6,8 +6,7 @@ import os.path
 from fastapi import Request, UploadFile, File, Form, Depends
 from fastapi.responses import FileResponse
 
-from ...models.autotest.model_factory import ApiModule as Module, ApiProject as Project, ApiReport as Report, \
-    ApiMsg as Api, ApiCase as Case, ApiCaseSuite as CaseSuite, ApiStep as Step
+from ...models.autotest.model_factory import ApiMsg as Api, ModelSelector
 from ...schemas.autotest import api as schema
 from utils.util.file_util import STATIC_ADDRESS
 from utils.parse.parse_excel import parse_file_content
@@ -35,13 +34,14 @@ async def change_api_status(request: Request, form: schema.ChangeStatus):
 
 
 async def get_api_from(request: Request, form: schema.GetApiFromForm = Depends()):
+    models = ModelSelector(request.app.test_type)
     filter_dict = {"id": form.id} if form.id else {"addr__icontains": form.api_addr}
     api_list = await Api.filter(**filter_dict).all()
 
     api_from_list = []
     for api in api_list:  # 多个接口存在同一个接口地址的情况
-        project = await Project.filter(id=api.project_id).first()
-        module_name = await Module.get_from_path(api.module_id)
+        project = await models.project.filter(id=api.project_id).first()
+        module_name = await models.module.get_from_path(api.module_id)
         api_dict = dict(api)
         api_dict["from"] = f'【{project.name}_{module_name}_{api.name}】'
         api_from_list.append(api_dict)
@@ -50,24 +50,25 @@ async def get_api_from(request: Request, form: schema.GetApiFromForm = Depends()
 
 async def get_api_use(request: Request, form: schema.GetApiFromForm = Depends()):
     await form.validate_request()
+    models = ModelSelector(request.app.test_type)
     filter_dict = {"id": form.id} if form.id else {"addr__icontains": form.api_addr}
     api_list = await Api.filter(**filter_dict).all()
 
     case_list, case_dict, project_dict = [], {}, {}  # 可能存在重复获取数据的请，获取到就存下来，一条数据只查一次库
     for api in api_list:  # 多个接口存在同一个接口地址的情况
-        for step in await Step.filter(api_id=api.id).all():  # 存在一个接口在多个步骤调用的情况
+        for step in await models.step.filter(api_id=api.id).all():  # 存在一个接口在多个步骤调用的情况
             # 获取步骤所在的用例
             if step.case_id not in case_dict:
-                case_dict[step.case_id] = await Case.filter(id=step.case_id).first()
+                case_dict[step.case_id] = await models.case.filter(id=step.case_id).first()
             case = case_dict[step.case_id]
 
             # 获取用例所在的用例集
-            suite = await CaseSuite.filter(id=case.suite_id).first()
-            suite_from_path = await CaseSuite.get_from_path(suite.id)
+            suite = await models.suite.filter(id=case.suite_id).first()
+            suite_from_path = await models.suite.get_from_path(suite.id)
 
             # 获取用例集所在的接口
             if suite.project_id not in project_dict:
-                project_dict[suite.project_id] = await Project.filter(id=suite.project_id).first()
+                project_dict[suite.project_id] = await models.project.filter(id=suite.project_id).first()
             project = project_dict[suite.project_id]
 
             case_dict = dict(case)
@@ -81,7 +82,8 @@ async def get_api_template(request: Request):
 
 
 async def upload_api(request: Request, file: UploadFile = File(), module_id: str = Form()):
-    module = await Module.filter(id=module_id).first()
+    models = ModelSelector(request.app.test_type)
+    module = await models.module.filter(id=module_id).first()
     if not module:
         return request.app.fail("模块不存在")
     if file and file.filename.endswith("xls"):
@@ -131,9 +133,10 @@ async def change_api(request: Request, form: schema.EditApiForm):
 
 
 async def delete_api(request: Request, form: schema.DeleteApiForm):
-    step = await Step.filter(api_id__in=form.id_list).first().values("api_id", "case_id")
+    models = ModelSelector(request.app.test_type)
+    step = await models.step.filter(api_id__in=form.id_list).first().values("api_id", "case_id")
     if step and step.get("case_id"):
-        case_name = await Case.filter(id=step.get("case_id")).first().values("name")
+        case_name = await models.case.filter(id=step.get("case_id")).first().values("name")
         api_name = await Api.filter(id=step.get("api_id")).first().values("name")
         raise ValueError(f"接口【{api_name['name']}】已被用例【{case_name['name']}】引用，请先解除引用")
 
@@ -142,16 +145,17 @@ async def delete_api(request: Request, form: schema.DeleteApiForm):
 
 
 async def run_api(request: Request, form: schema.RunApiMsgForm):
+    models = ModelSelector(request.app.test_type)
     run_api_list = [api["id"] for api in await Api.filter(id__in=form.id_list).all().values("id")]
     if len(run_api_list) == 0:
         ValueError(f"接口不存在")
     first_api = await Api.filter(id=run_api_list[0]).first().values("name", "project_id")
 
-    batch_id = Report.get_batch_id(request.state.user.id)
-    summary = Report.get_summary_template()
+    batch_id = models.report.get_batch_id(request.state.user.id)
+    summary = models.report.get_summary_template()
     for env_code in form.env_list:
         summary["env"]["code"], summary["env"]["name"] = env_code, env_code
-        report = await Report.get_new_report(
+        report = await models.report.get_new_report(
             batch_id=batch_id,
             trigger_id=form.id_list,
             name=first_api["name"],

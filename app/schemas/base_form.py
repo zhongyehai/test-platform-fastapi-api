@@ -22,13 +22,10 @@ class CurrentUserModel(pydanticBaseModel):
 class ParamModel(pydanticBaseModel):
     key: Union[str, None] = None
     value: Union[str, None] = None
-
-
-class HeaderModel(ParamModel):
     remark: Union[str, None] = None
 
 
-class DataFormModel(HeaderModel):
+class DataFormModel(ParamModel):
     data_type: Union[str, None] = None
 
 
@@ -36,7 +33,7 @@ class VariablesModel(DataFormModel):
     pass
 
 
-class ExtractModel(HeaderModel):
+class ExtractModel(ParamModel):
     value: Optional[Union[str, int, None]] = None
     status: Union[int, None] = None
     data_source: Union[str, None] = None
@@ -44,7 +41,7 @@ class ExtractModel(HeaderModel):
     update_to_header: Optional[Union[bool, int, None]] = None
 
 
-class ValidateModel(HeaderModel):
+class ValidateModel(ParamModel):
     status: Union[int, None] = None
     validate_type: Union[str, None] = None
     data_type: Union[str, None] = None
@@ -52,7 +49,7 @@ class ValidateModel(HeaderModel):
     validate_method: Union[str, None] = None
 
 
-class SkipIfModel(HeaderModel):
+class SkipIfModel(ParamModel):
     status: Optional[Union[int, None]] = None
     expect: Union[str, int, None] = None
     data_type: Union[str, None] = None
