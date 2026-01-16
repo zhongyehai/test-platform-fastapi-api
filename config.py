@@ -288,7 +288,7 @@ make_user_language_mapping = {
 }
 
 # tortoise-orm 配置
-tortoise_orm_conf = {
+_tortoise_orm_conf = {
     'connections': {
         'default': {
             # 连接字符串的形式特殊符号（#）会被解析为分隔符，所以用指定参数的形式

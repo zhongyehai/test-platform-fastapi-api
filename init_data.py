@@ -5,7 +5,7 @@ import os
 from tortoise import Tortoise, run_async
 
 from app.schemas.enums import DataStatusEnum
-from config import tortoise_orm_conf, AuthInfo
+from config import AuthInfo, _tortoise_orm_conf
 from app.models.system.model_factory import Permission, Role, RolePermissions, User, UserRoles
 from app.models.config.model_factory import BusinessLine, ConfigType, Config, RunEnv
 from app.models.assist.model_factory import Script
@@ -424,7 +424,7 @@ async def init_run_env():
 
 
 async def init_data():
-    await Tortoise.init(tortoise_orm_conf, timezone="Asia/Shanghai")
+    await Tortoise.init(_tortoise_orm_conf, timezone="Asia/Shanghai")
     print_start_delimiter("开始初始化数据")
     await init_run_env()
     await init_permission()
@@ -444,7 +444,7 @@ if __name__ == '__main__':
     run_init()
 """
 # 1. 先初始化
-aerich init -t config.tortoise_orm_conf
+aerich init -t config._tortoise_orm_conf
 
 # 2. 初次使用生成表 和 迁移文件
 aerich init-db

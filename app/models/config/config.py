@@ -133,7 +133,7 @@ class Config(NumFiled):
     @classmethod
     async def get_config_detail(cls, conf_id=None, conf_code=None):
         """ 先从 config.py 中找，没找到就从数据库查 """
-        if conf_code and hasattr(config, conf_code):
+        if conf_code.startswith("_") is False and conf_code and hasattr(config, conf_code):
             return getattr(config, conf_code)
         elif conf_code == "ui_key_board_code":
             return {key: f'按键【{key}】' for key in dir(Keys) if key.startswith('_') is False}

@@ -15,7 +15,7 @@ def register_app_hook(app):
         # 注册orm
         register_tortoise(
             app,
-            config=config.tortoise_orm_conf,
+            config=config._tortoise_orm_conf,
             add_exception_handlers=True
         )
 

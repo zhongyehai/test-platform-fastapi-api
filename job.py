@@ -5,7 +5,7 @@ from tortoise import Tortoise
 from tortoise.contrib.fastapi import register_tortoise
 from pydantic import BaseModel, Field
 
-from config import ServerInfo, tortoise_orm_conf
+from config import ServerInfo, _tortoise_orm_conf
 from utils.util.apscheduler import scheduler, request_run_task_api, logger
 
 job = FastAPI(
@@ -19,14 +19,14 @@ job.title = 'job服务'
 
 register_tortoise(
     job,
-    config=tortoise_orm_conf,
+    config=_tortoise_orm_conf,
     add_exception_handlers=True
 )
 
 @job.on_event('startup')
 async def init_scheduler_job():
     """ 初始化定时任务 """
-    await Tortoise.init(tortoise_orm_conf, timezone="Asia/Shanghai")  # 数据库链接
+    await Tortoise.init(_tortoise_orm_conf, timezone="Asia/Shanghai")  # 数据库链接
     # await Tortoise.generate_schemas(safe=True)
 
     task_list = await Tortoise.get_connection("default").execute_query_dict("SELECT `task_code`, cron  FROM apscheduler_jobs")  # 数据库中的所有任务
