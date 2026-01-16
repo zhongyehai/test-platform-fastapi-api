@@ -96,7 +96,7 @@ class APIRouter(fastAPIRouter):
         """ 判断是否登录 """
         if cls.request_path_is_in_whitelist(request) is False:
             from app.models.system.model_factory import User
-            if user := User.check_token(request.headers.get("access-token", ""), request.app.conf.token_secret_key):
+            if user := User.check_token(request.headers.get("access-token", ""), request.app.conf.AuthInfo.SECRET_KEY):
                 request.state.user = CurrentUserModel(**user)
             else:
                 raise HTTPException(401, "请重新登录")

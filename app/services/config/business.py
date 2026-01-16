@@ -39,7 +39,7 @@ async def add_business(request: Request, form: schema.PostBusinessForm):
     # 重新生成token
     user = await User.filter(id=request.state.user.id).first()
     token = user.make_access_token(
-        request.state.user.api_permissions, request.app.conf.access_token_time_out, request.app.conf.token_secret_key)
+        request.state.user.api_permissions, request.app.conf.AuthInfo.ACCESS_TOKEN_TIME_OUT, request.app.conf.AuthInfo.SECRET_KEY)
     return request.app.post_success(data={"token": token, "business_id": user.business_list})
 
 

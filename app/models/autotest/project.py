@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from ..base_model import BaseModel, fields, pydantic_model_creator
-from config import main_server_host
+from config import ServerInfo
 from utils.parse.parse import parse_list_to_dict, update_dict_to_list, parse_dict_to_list
 
 
@@ -92,7 +92,7 @@ UiProjectPydantic = pydantic_model_creator(UiProject, name="UiProject")
 class BaseProjectEnv(BaseModel):
     """ 服务环境基类表 """
 
-    host = fields.CharField(255, default=main_server_host, description="服务地址")
+    host = fields.CharField(255, default=ServerInfo.MAIN_ADDR, description="服务地址")
     variables = fields.JSONField(
         default=[{"key": None, "value": None, "remark": None, "data_type": None}], description="服务的公共变量")
 

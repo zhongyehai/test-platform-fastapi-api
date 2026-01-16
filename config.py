@@ -1,27 +1,91 @@
 import os
 import platform
 
+from dotenv import load_dotenv
+
 from utils.client.test_runner import validate_func as assert_func_file
 from utils.client.test_runner.webdriver_action import Actions
 
-is_linux = platform.platform().startswith("Linux")
+load_dotenv()  # 加载 .env 文件
 basedir = os.path.abspath(".")
+is_linux = platform.platform().startswith("Linux")
 
-token_secret_key = "localhost"  # 生成token的加密字符串
-access_token_time_out = 60 * 60  # access_token 有效期，1个小时
-refresh_token_time_out = 7 * 24 * 60 * 60  # refresh_token 有效期，7天
-password_secret_key = "PASSWORD_password_secret_key"  # 密码加密的字符串，一旦生成用户，不可更改，否则两次加密密文会不一致
 
-main_server_port = 8018  # 主程序端口
-main_server_host = f'http://localhost:{main_server_port}'  # 主程序后端服务
+class BaseConfig:
+    """ 统一用这个类获取配置 """
 
-job_server_port = 8019  # job服务端口
-job_server_host = f'http://localhost:{job_server_port}/api/job'  # job服务接口
+    @classmethod
+    def get_env(cls, key: str, default=None):
+        return os.getenv(key, default)
 
-# 默认的webhook地址，用于接收系统状态通知、系统异常/错误通知...
-_default_web_hook_type = 'ding_ding'  # 默认通知的webhook类型，见枚举类apps.enums.WebHookTypeEnum
-_default_web_hook = 'https://oapi.dingtalk.com/robot/send?'
-_web_hook_secret = ''  # secret，若是关键词模式，不用设置
+    @classmethod
+    def get_required_env(cls, key: str, default=None):
+        value = cls.get_env(key, default)
+        if value is None:
+            raise ValueError(f"配置文件中 【{key}】 字段必须配置")
+        return value
+
+
+class MysqlInfo(BaseConfig):
+    """ 数据库配置 """
+    HOST: str = BaseConfig.get_required_env('MYSQL_HOST')
+    PORT: int = int(BaseConfig.get_required_env('MYSQL_PORT'))
+    USER: str = BaseConfig.get_required_env('MYSQL_USER')
+    PASSWORD: str = BaseConfig.get_required_env('MYSQL_PASSWORD')
+    DATABASE: str = BaseConfig.get_required_env('MYSQL_DATABASE')
+
+
+class ServerInfo:
+    """ MAIN服务 和 JOB服务 的监听地址 """
+    MAIN_PORT: int = int(BaseConfig.get_env('MAIN_PORT', 8018))
+    MAIN_ADDR: str = BaseConfig.get_env('MAIN_HOST', "http://localhost") + f':{MAIN_PORT}'
+    JOB_PORT: int = int(BaseConfig.get_env('JOB_PORT', 8019))
+    JOB_ADDR: str = BaseConfig.get_env('JOB_HOST', "http://localhost") + f':{JOB_PORT}/api/job'
+
+
+class AuthInfo:
+    """
+    身份校验相关的配置
+    SECRET_KEY: 生成token的加密字符串
+    PASSWORD_SECRET_KEY: 密码加密的字符串，一旦生成用户，不可更改，否则两次加密密文会不一致
+    AUTH_TYPE: 身份验证机制 SSO, test_platform
+    """
+    AUTH_TYPE: str = BaseConfig.get_env('AUTH_TYPE', "test_platform")
+    SECRET_KEY: str = BaseConfig.get_env('AUTH_SECRET_KEY')
+    ACCESS_TOKEN_TIME_OUT: int = int(BaseConfig.get_env('AUTH_ACCESS_TOKEN_TIME_OUT', 60 * 60))
+    REFRESH_TOKEN_TIME_OUT: int = int(BaseConfig.get_env('AUTH_REFRESH_TOKEN_TIME_OUT', 7 * 24 * 60 * 60))
+    PASSWORD_SECRET_KEY: str = BaseConfig.get_env('AUTH_PASSWORD_SECRET_KEY')
+
+
+class DefaultWebhook:
+    """
+    默认的webhook地址，用于接收系统状态通知、系统异常/错误通知...
+    DEFAULT_WEBHOOK_TYPE: 默认通知的webhook类型，见枚举类app.schemas.enums.WebHookTypeEnum
+    WEBHOOK_SECRET: secret，若是关键词模式，不用设置
+    """
+    DEFAULT_WEBHOOK_TYPE: str = BaseConfig.get_env('DEFAULT_WEBHOOK_TYPE')
+    DEFAULT_WEBHOOK_ADDR: str = BaseConfig.get_env('DEFAULT_WEBHOOK_ADDR')
+    WEBHOOK_SECRET: str = BaseConfig.get_env('WEBHOOK_SECRET')
+
+
+class SSO:
+    """ 身份验证如果是走SSO，则以下配置项必须正确 """
+    # 开放平台SSO地址
+    HOST = BaseConfig.get_env("SSO_HOST_LINUX") if is_linux else BaseConfig.get_env("SSO_HOST_DEV")
+    AUTH_ENDPOINT = BaseConfig.get_env("SSO_AUTH_ENDPOINT")
+    SSO_TOKEN_ENDPOINT = BaseConfig.get_env("SSO_TOKEN_ENDPOINT")
+    CLIENT_ID = BaseConfig.get_env("SSO_CLIENT_ID_LINUX") if is_linux else BaseConfig.get_env("SSO_CLIENT_ID_DEV")
+    CLIENT_SECRET = BaseConfig.get_env("SSO_CLIENT_SECRET_LINUX") if is_linux else BaseConfig.get_env(
+        "SSO_CLIENT_SECRET_DEV")
+    # 测试平台SSO方式登录的前端地址
+    REDIRECT_URI = BaseConfig.get_env("SSO_REDIRECT_URI_LINUX") if is_linux else BaseConfig.get_env(
+        "SSO_REDIRECT_URI_DEV")
+    FRONT_REDIRECT_ADDR = (f"{HOST}{AUTH_ENDPOINT}?"
+                           f"response_type=code&client_id={CLIENT_ID}&"
+                           f"scope=openid&"
+                           f"state=41E9zTYrLymXGyQMyFO6BxYj2HZaPzSeEv-_Rk-Vjho=&"
+                           f"redirect_uri={REDIRECT_URI}&"
+                           f"nonce=DPRhbLXo-SvEnVoIw4PC9PNnBEseUUh9xzHUtdrbqG8")
 
 
 # 从 testRunner.built_in 中获取断言方式并映射为字典和列表，分别给前端和运行测试用例时反射断言
@@ -52,25 +116,13 @@ ui_extract_mapping_list.extend([
 ])
 
 # 跳过条件判断类型映射
-skip_if_type_mapping = [
-    {"label": "且", "value": "and"},
-    {"label": "或", "value": "or"}
-]
+skip_if_type_mapping = [{"label": "且", "value": "and"}, {"label": "或", "value": "or"}]
 
 # 测试类型
-test_type = [
-    {"key": "api", "label": "接口测试"},
-    {"key": "app", "label": "app测试"},
-    {"key": "ui", "label": "ui测试"}
-]
+test_type = [{"key": "api", "label": "接口测试"}, {"key": "app", "label": "app测试"}, {"key": "ui", "label": "ui测试"}]
 
 # 运行测试的类型
-run_type = {
-    "api": "接口",
-    "case": "用例",
-    "suite": "用例集",
-    "task": "任务",
-}
+run_type = {"api": "接口", "case": "用例", "suite": "用例集", "task": "任务"}
 
 # 执行模式
 run_model = {0: "串行执行", 1: "并行执行"}
@@ -121,10 +173,7 @@ data_type_mapping = [
 ]
 
 # ui自动化支持的浏览器
-browser_name = {
-    "chrome": "chrome",
-    "gecko": "火狐"
-}
+browser_name = {"chrome": "chrome", "gecko": "火狐"}
 
 # 运行app自动化的服务器设备系统映射
 server_os_mapping = ["Windows", "Mac", "Linux"]
@@ -238,24 +287,6 @@ make_user_language_mapping = {
     # 'zh_TW': '繁体中文'
 }
 
-auth_type = 'test_platform'  # 身份验证机制 SSO, test_platform
-class _Sso:
-    """ 身份验证如果是走SSO，则以下配置项必须正确 """
-    # 开放平台SSO地址
-    sso_host = "https://xxx" if is_linux else "http://www.xxx"
-    sso_authorize_endpoint = "/oauth2/authorize"
-    sso_token_endpoint = "/oauth2/token"
-    client_id = "xxx" if is_linux else "xxx"
-    client_secret = "xxx" if is_linux else "xxx"
-    # 测试平台SSO方式登录的前端地址
-    redirect_uri = "http://xxx/sso/login" if is_linux else "http://xxx/sso/login"
-    front_redirect_addr = (f"{sso_host}{sso_authorize_endpoint}?"
-                           f"response_type=code&client_id={client_id}&"
-                           f"scope=openid&"
-                           f"state=41E9zTYrLymXGyQMyFO6BxYj2HZaPzSeEv-_Rk-Vjho=&"
-                           f"redirect_uri={redirect_uri}&"
-                           f"nonce=DPRhbLXo-SvEnVoIw4PC9PNnBEseUUh9xzHUtdrbqG8")
-
 # tortoise-orm 配置
 tortoise_orm_conf = {
     'connections': {
@@ -263,16 +294,13 @@ tortoise_orm_conf = {
             # 连接字符串的形式特殊符号（#）会被解析为分隔符，所以用指定参数的形式
             'engine': 'tortoise.backends.mysql',
             'credentials': {
-                "echo": True if not is_linux else False,  # 非Linux则打印sql语句
-
-                # 本地
-                'host': 'localhost',
-                'port': '3306',
-                'user': 'root',
-                'password': 'ApiTes123qwe',
-                'database': 'test_platform_fastapi'
+                "echo": is_linux is False,  # 非Linux则打印sql语句
+                'host': MysqlInfo.HOST,
+                'port': MysqlInfo.PORT,
+                'user': MysqlInfo.USER,
+                'password': MysqlInfo.PASSWORD,
+                'database': MysqlInfo.DATABASE,
             }
-
         }
     },
     'apps': {

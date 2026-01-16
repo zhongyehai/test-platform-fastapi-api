@@ -5,7 +5,7 @@ from app.routers.base_view import FastAPI
 from app.hooks.error_hook import register_exception_handler
 from app.hooks.request_hook import register_request_hook
 from app.hooks.app_hook import register_app_hook
-from config import main_server_port
+from config import ServerInfo
 
 app = FastAPI(
     openapi_version="3.0.0",
@@ -41,4 +41,4 @@ if __name__ == '__main__':
     workers = 1
     print(f"启动 workers 数量：{workers}")
 
-    uvicorn.run('main:app', host="0.0.0.0", port=main_server_port, workers=workers)
+    uvicorn.run('main:app', host="0.0.0.0", port=ServerInfo.MAIN_PORT, workers=workers)

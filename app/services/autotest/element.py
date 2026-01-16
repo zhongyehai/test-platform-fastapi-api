@@ -68,7 +68,7 @@ async def element_upload(request: Request, file: UploadFile = File(), page_id: s
 
 async def get_element_from(request: Request, form: schema.GetElementForm = Depends()):
     models = ModelSelector(request.app.test_type)
-    element = await models.element.element.validate_is_exist("元素不存在", id=form.id)
+    element = await models.element.validate_is_exist("元素不存在", id=form.id)
     project = await models.project.filter(id=element.project_id).first().values("name")
     module_name = await models.module.get_from_path(element.module_id)
     page = await models.page.filter(id=element.page_id).first().values("name")

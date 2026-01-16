@@ -8,7 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler as _AsyncIOScheduler
 from tortoise import Tortoise
 from loguru import logger as loguru_logger
 
-from config import main_server_host
+from config import ServerInfo
 from utils.parse.parse_cron import parse_cron
 from utils.util.file_util import LOG_ADDRESS
 
@@ -99,7 +99,7 @@ async def request_run_task_api(task_code, task_type, skip_holiday=True):
 
     async with httpx.AsyncClient(verify=False) as client:
         response = await client.post(
-            f'{main_server_host}/api{api_addr}',
+            f'{ServerInfo.MAIN_ADDR}/api{api_addr}',
             json={
                 "id": task_id,  # 系统定时任务
                 "id_list": [task_id],  # 自动化测试任务

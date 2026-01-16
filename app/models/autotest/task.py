@@ -3,7 +3,7 @@ import httpx
 
 from ..base_model import BaseModel, fields, pydantic_model_creator
 from app.schemas.enums import SendReportTypeEnum, ReceiveTypeEnum, DataStatusEnum
-from config import job_server_host
+from config import ServerInfo
 
 
 class BaseTask(BaseModel):
@@ -49,7 +49,7 @@ class BaseTask(BaseModel):
         try:
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.post(
-                    url=job_server_host,
+                    url=ServerInfo.JOB_ADDR,
                     headers={"access-token": token},
                     json={"user_id": user_id, "task": dict_task, "task_type": task_type}
                 )
@@ -64,7 +64,7 @@ class BaseTask(BaseModel):
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.request(
                     method="DELETE",
-                    url=job_server_host,
+                    url=ServerInfo.JOB_ADDR,
                     headers={"access-token": token},
                     json={"task_code": f'{task_type}_{self.id}'}
                 )

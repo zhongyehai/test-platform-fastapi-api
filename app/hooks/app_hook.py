@@ -37,11 +37,11 @@ def register_app_hook(app):
 
         app.logger.info(f'\n\n\n{"*" * 20} 服务【{app.title}】启动完成 {"*" * 20}\n\n\n'"")
         if config.is_linux:
-            await send_server_status(config.token_secret_key, app.title, action_type='启动')
+            await send_server_status(config.AuthInfo.SECRET_KEY, app.title, action_type='启动')
 
     @app.on_event("shutdown")
     async def shutdown_event():
         await Tortoise.close_connections()
         app.logger.info(f'\n\n\n{"*" * 20} 服务【{app.title}】关闭完成 {"*" * 20}\n\n\n'"")
         if config.is_linux:
-            await send_server_status(config.token_secret_key, app.title, action_type='关闭')
+            await send_server_status(config.AuthInfo.SECRET_KEY, app.title, action_type='关闭')

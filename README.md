@@ -29,7 +29,10 @@
     查看最大连接数 show variables like 'max_connections';
     设置最大连接数 set global max_connections=16384;
 
-### 3.初始化数据库表结构（项目根目录下依次执行下面命令）：
+### 3.在.env文件中填写对应配置
+    把跟目录下的 “env模板” 文件 重命名为 “.env”，并填写对应的参数
+
+### 4.初始化数据库表结构（项目根目录下依次执行下面命令）：
 
     3.1、第一次初始化数据库只需要执行以下步骤
         3.1.1. 初始化数据库配置、生成迁移文件: aerich init -t config.tortoise_orm_conf
@@ -39,21 +42,15 @@
         3.2.1. 对比变更、并映射到数据库: aerich migrate
         3.2.2. 把最新版本的数据结构同步到aerich表: aerich upgrade
 
-### 4.初始化权限、角色、管理员一起一些初始化配置（项目根目录下执行，账号：admin，密码：123456）
+### 5.初始化权限、角色、管理员一起一些初始化配置（项目根目录下执行，账号：admin，密码：123456）
 
     执行 sudo python init_data.py run_init
 
-### 5、若要进行UI自动化：
+### 6、若要进行UI自动化：
 
-    5.1安装浏览器，详见：https://www.cnblogs.com/zhongyehai/p/16266455.html
+    需安装对应的浏览器，建议装chrome浏览器
 
-    5.2.准备浏览器驱动
-        5.2.1、根据要用来做自动化的浏览器的类型下载对应版本的驱动，详见：https://www.selenium.dev/documentation/zh-cn/webdriver/driver_requirements/
-        5.2.2、把下载的驱动放到项目外的 browser_drivers 路径下，项目启动时若没有则会自动创建，若项目未启动过，则需手动创建
-
-    5.3.给驱动加权限：chmod +x chromedriver
-
-### 6.生产环境下的一些配置:
+### 7.生产环境下的一些配置:
 
     1.把main端口改为8024启动
     2.把job端口改为8025启动
@@ -61,7 +58,7 @@
     4.直接把项目下的nginx.conf文件替换nginx下的nginx.conf文件
     5.nginx -s reload 重启nginx
 
-### 7.启动测试平台
+### 8.启动测试平台
 
     本地开发: 
         运行测试平台主服务              main.py

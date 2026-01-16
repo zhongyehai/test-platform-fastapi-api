@@ -5,7 +5,7 @@ import os
 from tortoise import Tortoise, run_async
 
 from app.schemas.enums import DataStatusEnum
-from config import tortoise_orm_conf, password_secret_key
+from config import tortoise_orm_conf, AuthInfo
 from app.models.system.model_factory import Permission, Role, RolePermissions, User, UserRoles
 from app.models.config.model_factory import BusinessLine, ConfigType, Config, RunEnv
 from app.models.assist.model_factory import Script
@@ -272,7 +272,7 @@ async def init_user():
     for user_info in user_list:
         if not await User.filter(account=user_info["account"]).first():
             user_info["status"] = DataStatusEnum.ENABLE
-            user_info["password"] = User.password_to_hash(user_info["password"], password_secret_key)
+            user_info["password"] = User.password_to_hash(user_info["password"], AuthInfo.PASSWORD_SECRET_KEY)
             user_info["business_list"] = [business.id]
             user = await User.model_create(user_info)
             for role_name in user_info["role"]:

@@ -10,7 +10,7 @@ from utils.parse.parse_token import parse_token
 async def get_sso_server_info(request: Request):
     """ 获取sso相关信息 """
     async with httpx.AsyncClient(verify=False) as client:
-        response = await client.post(url=f'{request.app.conf._Sso.oss_host}/.well-known/openid-configuration', timeout=30)
+        response = await client.post(url=f'{request.app.conf.SSO.HOST}/.well-known/openid-configuration', timeout=30)
     res = response.json()
     return {
         "authorization_endpoint": res["authorization_endpoint"], "token_endpoint": res["token_endpoint"],
@@ -20,14 +20,14 @@ async def get_sso_server_info(request: Request):
 
 async def get_sso_token(request: Request, code):
     """ 从sso服务器获取用户token """
-    sso_config = request.app.conf._Sso
-    url = f'{sso_config.sso_host}{sso_config.sso_token_endpoint}'
+    sso = request.app.conf.SSO
+    url = f'{sso.HOST}{sso.SSO_TOKEN_ENDPOINT}'
     data = {
         "grant_type": "authorization_code",
         "code": code,
-        "client_id": sso_config.client_id,
-        "client_secret": sso_config.client_secret,
-        "redirect_uri": sso_config.redirect_uri
+        "client_id": sso.CLIENT_ID,
+        "client_secret": sso.CLIENT_SECRET,
+        "redirect_uri": sso.REDIRECT_URI
     }
     request.app.logger.info(f'get_sso_token: \nurl: {url}, \ndata: {data}')
     async with httpx.AsyncClient(verify=False) as client:
@@ -38,7 +38,7 @@ async def get_sso_token(request: Request, code):
 
 async def get_sso_redirect_uri(request: Request):
     """ 返回重定向的登录地址 """
-    redirect_addr = request.app.conf._Sso.front_redirect_addr if request.app.conf.auth_type == "SSO" else None
+    redirect_addr = request.app.conf.SSO.FRONT_REDIRECT_ADDR if request.app.conf.AuthInfo.AUTH_TYPE == "SSO" else None
     return request.app.not_login(redirect_addr)
 
 
@@ -80,11 +80,11 @@ async def login_by_sso_code(request: Request, form: schema.GetSsoTokenForm = Dep
 
     # 根据用户id信息生成token，并返回给前端
     user_info = await user.build_access_token(
-        request.app.conf.access_token_time_out,
-        request.app.conf.token_secret_key
+        request.app.conf.AuthInfo.ACCESS_TOKEN_TIME_OUT,
+        request.app.conf.AuthInfo.SECRET_KEY
     )
     user_info["refresh_token"] = user.make_refresh_token(
-        request.app.conf.access_token_time_out,
-        request.app.conf.token_secret_key
+        request.app.conf.AuthInfo.ACCESS_TOKEN_TIME_OUT,
+        request.app.conf.AuthInfo.SECRET_KEY
     )
     return request.app.success("登录成功", user_info)

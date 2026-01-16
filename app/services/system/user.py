@@ -39,7 +39,7 @@ async def add_user(request: Request, form: schema.CreateUserForm):
         user = data.dict()
         user["num"] = max_num + index + 1
         role_list = user.pop("role_list")
-        user["password"] = User.password_to_hash(user["password"], request.app.conf.password_secret_key)
+        user["password"] = User.password_to_hash(user["password"], request.app.conf.AuthInfo.PASSWORD_SECRET_KEY)
         user = await User.model_create(user, request.state.user)
         await user.insert_user_roles(role_list)
     return request.app.post_success()
@@ -68,26 +68,26 @@ async def delete_user(request: Request, form: schema.GetUserForm):
 async def user_login(request: Request, form: schema.LoginForm):
     user = await User.filter(account=form.account).first()
     if user is None: return request.app.fail("账号或密码错误")
-    form.validate_is_true(user.verify_password(form.password, request.app.conf.password_secret_key), "账号或密码错误")
+    form.validate_is_true(user.verify_password(form.password, request.app.conf.AuthInfo.PASSWORD_SECRET_KEY), "账号或密码错误")
     form.validate_is_true(user.status != DataStatusEnum.DISABLE, "账号为冻结状态，请联系管理员")
 
     user_info = await user.build_access_token(
-            request.app.conf.access_token_time_out,
-            request.app.conf.token_secret_key
+            request.app.conf.AuthInfo.ACCESS_TOKEN_TIME_OUT,
+            request.app.conf.AuthInfo.SECRET_KEY
         )
     user_info["refresh_token"] = user.make_refresh_token(
-            request.app.conf.refresh_token_time_out,
-            request.app.conf.token_secret_key
+            request.app.conf.AuthInfo.REFRESH_TOKEN_TIME_OUT,
+            request.app.conf.AuthInfo.SECRET_KEY
         )
     return request.app.success("登录成功", user_info)
 
 
 async def refresh_token(request: Request):
-    if user := User.check_token(request.headers.get("refresh-token", ""), request.app.conf.token_secret_key):
+    if user := User.check_token(request.headers.get("refresh-token", ""), request.app.conf.AuthInfo.SECRET_KEY):
         user = await User.filter(id=user["user_id"]).first()
         user_info = await user.build_access_token(
-            request.app.conf.refresh_token_time_out,
-            request.app.conf.token_secret_key
+            request.app.conf.AuthInfo.REFRESH_TOKEN_TIME_OUT,
+            request.app.conf.AuthInfo.SECRET_KEY
         )
         return request.app.success(data=user_info)
     return request.app.not_login()
@@ -110,7 +110,7 @@ async def change_email(request: Request, form: schema.ChangeUserEmailForm):
 
 async def reset_password(request: Request, form: schema.GetUserForm):
     user = await User.validate_is_exist("用户不存在", id=form.id)
-    new_password = await user.reset_password(request.app.conf.password_secret_key)
+    new_password = await user.reset_password(request.app.conf.AuthInfo.PASSWORD_SECRET_KEY)
     return request.app.success(f'重置成功，新密码为：{new_password}')
 
 
@@ -123,9 +123,9 @@ async def change_user_password(request: Request, form: schema.ChangePasswordForm
     await form.validate_request()
 
     user = await User.filter(id=request.state.user.id).first()
-    form.validate_is_true(user.verify_password(form.old_password, request.app.conf.password_secret_key), "账号或密码错误")
+    form.validate_is_true(user.verify_password(form.old_password, request.app.conf.AuthInfo.PASSWORD_SECRET_KEY), "账号或密码错误")
 
-    new_password = User.password_to_hash(form.new_password, request.app.conf.password_secret_key)
+    new_password = User.password_to_hash(form.new_password, request.app.conf.AuthInfo.PASSWORD_SECRET_KEY)
     await User.filter(id=request.state.user.id).update(password=new_password)
     return request.app.put_success()
 
@@ -133,7 +133,7 @@ async def change_user_password(request: Request, form: schema.ChangePasswordForm
 async def migrate_user_change_password(request: Request, form: schema.MigrateUserChangePasswordForm):
     await form.validate_request()
     user = await User.filter(id=request.state.user.id).first()
-    form.validate_is_true(user.verify_password(form.old_password, request.app.conf.password_secret_key), "账号或密码错误")
-    new_password = User.password_to_hash(form.new_password, request.app.conf.password_secret_key)
+    form.validate_is_true(user.verify_password(form.old_password, request.app.conf.AuthInfo.PASSWORD_SECRET_KEY), "账号或密码错误")
+    new_password = User.password_to_hash(form.new_password, request.app.conf.AuthInfo.PASSWORD_SECRET_KEY)
     await User.filter(id=user.id).update(password=new_password)
     return request.app.put_success()

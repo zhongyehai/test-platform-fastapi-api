@@ -1,10 +1,7 @@
 from selenium.webdriver.common.keys import Keys
 
 from ..base_model import fields, pydantic_model_creator, NumFiled
-from config import data_type_mapping, skip_if_type_mapping, run_model, extracts_mapping, assert_mapping_list, \
-    http_method, api_suite_list, ui_suite_list, run_type, ui_assert_mapping_list, ui_extract_mapping_list, \
-    ui_action_mapping_list, browser_name, app_key_code, server_os_mapping, phone_os_mapping, \
-    make_user_info_mapping, make_user_language_mapping, test_type
+import config
 
 class ConfigType(NumFiled):
     """ 配置类型表 """
@@ -135,58 +132,21 @@ class Config(NumFiled):
 
     @classmethod
     async def get_config_detail(cls, conf_id=None, conf_code=None):
-        match conf_code:
-            case "data_type_mapping":
-                return data_type_mapping
-            case "skip_if_type_mapping":
-                return skip_if_type_mapping
-            case "run_model":
-                return run_model
-            case "extracts_mapping":
-                return extracts_mapping
-            case "assert_mapping_list":
-                return assert_mapping_list
-            case "ui_assert_mapping_list":
-                return ui_assert_mapping_list
-            case "ui_extract_mapping_list":
-                return ui_extract_mapping_list
-            case "ui_action_mapping_list":
-                return ui_action_mapping_list
-            case "ui_key_board_code":
-                return {key: f'按键【{key}】' for key in dir(Keys) if key.startswith('_') is False}
-            case "app_key_code":
-                return app_key_code
-            case "http_method":
-                return http_method
-            case "api_suite_list":
-                return api_suite_list
-            case "ui_suite_list":
-                return ui_suite_list
-            case "run_type":
-                return run_type
-            case "browser_name":
-                return browser_name
-            case "server_os_mapping":
-                return server_os_mapping
-            case "phone_os_mapping":
-                return phone_os_mapping
-            case "make_user_info_mapping":
-                return make_user_info_mapping
-            case "make_user_language_mapping":
-                return make_user_language_mapping
-            case "test_type":
-                return test_type
+        """ 先从 config.py 中找，没找到就从数据库查 """
+        if conf_code and hasattr(config, conf_code):
+            return getattr(config, conf_code)
+        elif conf_code == "ui_key_board_code":
+            return {key: f'按键【{key}】' for key in dir(Keys) if key.startswith('_') is False}
+        else:
+            if conf_id:
+                conf = await Config.validate_is_exist("配置不存在", id=conf_id)
+            else:
+                conf = await Config.validate_is_exist("配置不存在", name=conf_code)
+            try:
+                return cls.loads(conf.value)
+            except:
+                return conf.value
 
-            case _:
-                if conf_id:
-                    conf = await Config.validate_is_exist("配置不存在", id=conf_id)
-                else:
-                    conf = await Config.validate_is_exist("配置不存在", name=conf_code)
-                try:
-                    return cls.loads(conf.value)
-                except:
-                    return conf.value
-                
 
 ConfigTypePydantic = pydantic_model_creator(ConfigType, name="ConfigType")
 ConfigPydantic = pydantic_model_creator(Config, name="Config")

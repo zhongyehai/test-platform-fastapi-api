@@ -11,7 +11,7 @@ from .template import run_time_error_msg, call_back_webhook_msg, render_html_rep
     get_business_stage_count_msg, inspection_ding_ding, inspection_we_chat, server_status_msg_ding_ding, \
     server_status_msg_we_chat
 from ..logs.log import logger
-from config import _default_web_hook_type, _default_web_hook, _web_hook_secret
+from config import DefaultWebhook
 
 
 async def send_msg(addr, msg):
@@ -29,12 +29,12 @@ async def send_msg(addr, msg):
 
 async def send_server_status(server_name, app_title=None, action_type="启动"):
     """ 服务启动/关闭成功 """
-    if _default_web_hook_type == WebHookTypeEnum.DING_DING.value:
+    if DefaultWebhook.DEFAULT_WEBHOOK_TYPE == WebHookTypeEnum.DING_DING.value:
         msg = server_status_msg_ding_ding(action_type, server_name, app_title)
     else:
         msg = server_status_msg_we_chat(action_type, server_name, app_title)
 
-    await send_msg(WebHook.build_webhook_addr(_default_web_hook_type, _default_web_hook, _web_hook_secret), msg)
+    await send_msg(WebHook.build_webhook_addr(DefaultWebhook.DEFAULT_WEBHOOK_TYPE, DefaultWebhook.DEFAULT_WEBHOOK_ADDR, DefaultWebhook.WEBHOOK_SECRET), msg)
 
 
 async def send_system_error(title, content):

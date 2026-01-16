@@ -5,7 +5,7 @@ from tortoise import Tortoise
 from tortoise.contrib.fastapi import register_tortoise
 from pydantic import BaseModel, Field
 
-from config import job_server_port, tortoise_orm_conf
+from config import ServerInfo, tortoise_orm_conf
 from utils.util.apscheduler import scheduler, request_run_task_api, logger
 
 job = FastAPI(
@@ -58,7 +58,8 @@ async def add_job(request: Request, form: GetJobForm):
     logger.info(f"定时任务【{form.task_code}】禁用成功")
     return JSONResponse(status_code=200, content=jsonable_encoder({"status": 200, "message": "任务禁用成功"}))
 
+
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run('job:job', host="0.0.0.0", port=job_server_port, workers=1)
+    uvicorn.run('job:job', host="0.0.0.0", port=ServerInfo.JOB_PORT, workers=1)

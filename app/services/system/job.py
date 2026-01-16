@@ -21,7 +21,7 @@ from ...models.autotest.model_factory import ApiProject as Project, ApiReport, A
     UiReport, UiReportCase, UiReportStep, AppReport, AppReportCase, AppReportStep
 from utils.util.file_util import FileUtil
 from utils.message.send_report import send_business_stage_count
-from config import job_server_host
+from config import ServerInfo
 
 
 class JobFuncs:
@@ -292,7 +292,7 @@ async def enable_job(request: Request, form: schema.RunJobForm):
     try:
         async with httpx.AsyncClient(verify=False) as client:
             res = await client.post(
-                job_server_host,
+                ServerInfo.JOB_ADDR,
                 headers={"access-token": request.headers.get("access-token")},
                 json={
                     "task": form.loads(task_conf),
@@ -311,7 +311,7 @@ async def disable_job(request: Request, form: schema.RunJobForm):
         async with httpx.AsyncClient(verify=False) as client:
             res = await client.request(
                 method="DELETE",
-                url=job_server_host,
+                url=ServerInfo.JOB_ADDR,
                 headers={"access-token": request.headers.get("access-token")},
                 json={"task_code": f'cron_{form.func_name}'}
             )

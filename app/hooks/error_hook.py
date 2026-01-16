@@ -98,7 +98,7 @@ def register_exception_handler(app):
             # 发送即时通讯通知
             if platform.platform().startswith('Linux'):
                 await send_system_error(
-                    title=f'{request.app.conf.token_secret_key}报错通知，数据id：{error_record.id}', content=error)
+                    title=f'{request.app.conf.AuthInfo.SECRET_KEY}报错通知，数据id：{error_record.id}', content=error)
         except Exception as error:
             request.app.logger.error(traceback.format_exc())
 
