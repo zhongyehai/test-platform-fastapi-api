@@ -45,7 +45,7 @@ async def get_task_detail(request: Request, form: schema.GetTaskForm = Depends()
 async def add_task(request: Request, form: schema.AddTaskForm):
     models = ModelSelector(request.app.test_type)
     await form.validate_request(request)
-    await models.task.model_create(form.dict(), request.state.user)
+    await models.task.model_create(form.model_dump(), request.state.user)
     return request.app.post_success()
 
 

@@ -28,7 +28,7 @@ async def get_queue_instance(request: Request, form: schema.GetQueueInstanceForm
 
 
 async def add_queue_instance(request: Request, form: schema.CreatQueueInstanceForm):
-    await QueueInstance.model_create(form.dict(), request.state.user)
+    await QueueInstance.model_create(form.model_dump(), request.state.user)
     return request.app.post_success()
 
 
@@ -60,7 +60,7 @@ async def get_queue_topic(request: Request, form: schema.GetQueueTopicForm = Dep
 
 
 async def add_queue_topic(request: Request, form: schema.CreatQueueTopicForm):
-    await QueueTopic.model_create(form.dict(), request.state.user)
+    await QueueTopic.model_create(form.model_dump(), request.state.user)
     return request.app.post_success()
 
 

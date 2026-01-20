@@ -30,7 +30,7 @@ async def get_business_detail(request: Request, form: schema.GetBusinessForm = D
 
 async def add_business(request: Request, form: schema.PostBusinessForm):
     await form.validate_request(request)
-    business = await BusinessLine.model_create(form.dict(), request.state.user)
+    business = await BusinessLine.model_create(form.model_dump(), request.state.user)
 
     # 给创建者添加绑定关系
     request.state.user.business_list.append(business.id)

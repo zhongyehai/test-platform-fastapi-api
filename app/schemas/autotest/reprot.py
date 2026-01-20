@@ -8,12 +8,12 @@ from ..enums import ReportStepStatusEnum
 class FindReportForm(PaginationForm):
     """ 查询报告 """
     project_id: int = Field(..., title="服务id")
-    name: Optional[str] = Field(title="报告名")
-    create_user: Optional[int] = Field(title="创建人")
-    trigger_type: Optional[str] = Field(title="触发类型")
-    run_type: Optional[str] = Field(title="执行类型")
-    is_passed: Optional[int] = Field(title="是否通过")
-    run_env: Optional[list] = Field(title="运行环境")
+    name: Optional[str] = Field(None, title="报告名")
+    create_user: Optional[int] = Field(None, title="创建人")
+    trigger_type: Optional[str] = Field(None, title="触发类型")
+    run_type: Optional[str] = Field(None, title="执行类型")
+    is_passed: Optional[int] = Field(None, title="是否通过")
+    run_env: Optional[list] = Field(None, title="运行环境")
     trigger_id: Optional[int] = Field(None, title="运行数据id", description="接口id、用例id、任务id")
 
     def get_query_filter(self, *args, **kwargs):
@@ -54,7 +54,7 @@ class GetReportCaseSuiteListForm(PaginationForm):
 
 class GetReportCaseListForm(GetReportCaseSuiteListForm):
     """ 获取报告用例列表 """
-    get_summary: Optional[bool] = Field(title="是否获取详情")
+    get_summary: Optional[bool] = Field(None, title="是否获取详情")
 
 
 class GetReportCaseForm(BaseForm):
@@ -65,7 +65,7 @@ class GetReportCaseForm(BaseForm):
 class GetReportStepListForm(PaginationForm):
     """ 获取报告步骤列表 """
     report_case_id: int = Field(..., title="报告用例id")
-    get_summary: Optional[bool] = Field(title="是否获取详情")
+    get_summary: Optional[bool] = Field(None, title="是否获取详情")
 
 
 class GetReportStepForm(BaseForm):

@@ -1,6 +1,6 @@
+import re
 from typing import Optional, Union, List
 from pydantic import Field, AnyUrl
-import validators
 
 from ...models.system.model_factory import User
 from ..base_form import BaseForm, PaginationForm, ValidateModel, ParamModel, ChangeSortForm
@@ -8,10 +8,10 @@ from ..base_form import BaseForm, PaginationForm, ValidateModel, ParamModel, Cha
 
 class FindProjectListForm(PaginationForm):
     """ 查找服务form """
-    name: Optional[str] = Field(title="服务名")
-    manager: Optional[Union[int, str]] = Field(title="负责人")
-    business_id: Optional[int] = Field(title="所属业务线")
-    create_user: Optional[Union[int, str]] = Field(title="创建者")
+    name: Optional[str] = Field(None, title="服务名")
+    manager: Optional[Union[int, str]] = Field(None, title="负责人")
+    business_id: Optional[int] = Field(None, title="所属业务线")
+    create_user: Optional[Union[int, str]] = Field(None, title="创建者")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -45,24 +45,36 @@ class AddProjectForm(BaseForm):
     name: str = Field(..., min_length=1, max_length=255, title="服务名")
     manager: int = Field(..., title="负责人")
     business_id: int = Field(..., title="业务线")
-    script_list: Optional[list] = Field(title="要使用的脚本")
+    script_list: Optional[list] = Field(None, title="要使用的脚本")
 
     # api自动化测试
-    source_type: Optional[str] = Field(title="服务对应的接口文档地址类型，swagger、apifox")
-    source_addr: Optional[AnyUrl] = Field(title="服务对应的接口文档地址")
+    source_type: Optional[str] = Field(None, title="服务对应的接口文档地址类型，swagger、apifox")
+    source_addr: Optional[AnyUrl] = Field(None, title="服务对应的接口文档地址")
+    source_id: Optional[int] = Field(None, title="服务对应的项目id")
 
     # app自动化测试
-    app_package: Optional[str] = Field(title="app包名")
-    app_activity: Optional[str] = Field(title="appActivity")
-    template_device: Optional[str] = Field(title="元素定位时参照的设备id")
+    app_package: Optional[str] = Field(None, title="app包名")
+    app_activity: Optional[str] = Field(None, title="appActivity")
+    template_device: Optional[str] = Field(None, title="元素定位时参照的设备id")
 
 
     def validate_source_addr(self):
         """ 校验接口文档地址 """
         if self.source_addr:
             self.validate_is_true(
-                f"接口文档地址不正确，请输入获取接口文档数据的地址，不要输入页面地址", "swagger-ui.htm" not in self.source_addr
+                "swagger-ui.htm" not in str(self.source_addr),
+                f"接口文档地址不正确，请输入获取接口文档数据的地址，不要输入页面地址",
             )
+            source_addr = str(self.source_addr)
+            if "/project" in source_addr:  # apifox，检查是否包含project_id
+                self.validate_is_true(
+                    len(self.parse_source_id()) > 0,
+                    f"接口文档地址不正确，apifox的项目请输入页面地址即可"
+                )
+                self.source_id = self.parse_source_id()[-1]
+
+    def parse_source_id(self):
+        return re.findall(r'\d+', str(self.source_addr))
 
     async def validate_request(self, *args, **kwargs):
         self.validate_source_addr()
@@ -86,14 +98,14 @@ class EditEnvForm(GetEnvForm):
     id: int = Field(..., title="环境数据id")
     host: str = Field(..., title="域名")
     variables: List[ValidateModel] = Field(title="变量")
-    headers: Optional[List[ParamModel]] = Field(title="头部信息")
+    headers: Optional[List[ParamModel]] = Field(None, title="头部信息")
 
     def validate_variables(self, all_func_name, all_variables):
         """ 公共变量参数的校验
         1.校验是否存在引用了自定义函数但是没有引用脚本文件的情况
         2.校验是否存在引用了自定义变量，但是自定义变量未声明的情况
         """
-        variables = [variable.dict() for variable in self.variables]
+        variables = [variable.model_dump() for variable in self.variables]
         self.validate_variable_format(variables)  # 校验格式
         self.validate_func(all_func_name, content=self.dumps(variables))  # 校验引用的自定义函数
         self.validate_variable(all_variables, self.dumps(variables), "自定义变量")  # 校验变量
@@ -104,7 +116,7 @@ class EditEnvForm(GetEnvForm):
         2.校验是否存在引用了自定义变量，但是自定义变量未声明的情况
         """
         if self.headers:
-            headers = [header.dict() for header in self.headers]
+            headers = [header.model_dump() for header in self.headers]
             self.validate_header_format(headers)  # 校验格式
             self.validate_func(all_func_name, content=self.dumps(headers))  # 校验引用的自定义函数
             self.validate_variable(all_variables, self.dumps(headers), "头部信息")  # 校验引用的变量

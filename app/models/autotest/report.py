@@ -9,20 +9,20 @@ from app.schemas.enums import TriggerTypeEnum
 class BaseReport(BaseModel):
     """ 测试报告基类表 """
 
-    name = fields.CharField(128, description="测试报告名称")
+    name = fields.CharField(max_length=128, description="测试报告名称")
     is_passed = fields.IntField(default=1, description="是否全部通过，1全部通过，0有报错")
     # is_async = fields.IntField(default=0, description="任务的运行机制，0：用例维度串行执行，1：用例维度并行执行")
-    run_type = fields.CharField(16, default="task", description="报告类型，task/suite/case/api")
+    run_type = fields.CharField(max_length=16, default="task", description="报告类型，task/suite/case/api")
     status = fields.IntField(default=1, description="当前节点是否执行完毕，1执行中，2执行完毕")
     retry_count = fields.IntField(default=0, description="已经执行重试的次数")
-    env = fields.CharField(128, default="test", description="运行环境")
+    env = fields.CharField(max_length=128, default="test", description="运行环境")
     temp_variables = fields.JSONField(null=True, default={}, description="临时参数")
     process = fields.IntField(default=1, description="进度节点, 1: 解析数据、2: 执行测试、3: 写入报告")
     trigger_type = fields.CharEnumField(
         TriggerTypeEnum, default=TriggerTypeEnum.PAGE, description="触发类型，pipeline:流水线、page:页面、cron:定时任务")
-    batch_id = fields.CharField(128, index=True, description="运行批次id，用于查询报告")
+    batch_id = fields.CharField(max_length=128, index=True, description="运行批次id，用于查询报告")
     # run_id = fields.JSONField(description="运行id，用于触发重跑接口/用例/用例集/任务")
-    trigger_id = fields.JSONField(null=True, comment="运行id，用于触发重跑")
+    trigger_id = fields.JSONField(null=True, description="运行id，用于触发重跑")
     project_id = fields.IntField(index=True, description="所属的服务id")
     summary = fields.JSONField(default={}, description="报告的统计")
     notified = fields.BooleanField(default=False, description="标记是否已经通知过了")

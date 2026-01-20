@@ -6,11 +6,11 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 class GetHitListForm(PaginationForm):
     """ 获取自动化测试命中问题列表 """
-    date: Optional[str] = Field(title='记录时间')
-    hit_type: Optional[str] = Field(title='问题类型')
-    test_type: Optional[str] = Field(title='测试类型')
-    hit_detail: Optional[str] = Field(title='问题内容')
-    report_id: Optional[int] = Field(title='报告id')
+    date: Optional[str] = Field(None, title='记录时间')
+    hit_type: Optional[str] = Field(None, title='问题类型')
+    test_type: Optional[str] = Field(None, title='测试类型')
+    hit_detail: Optional[str] = Field(None, title='问题内容')
+    report_id: Optional[int] = Field(None, title='报告id')
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -42,7 +42,7 @@ class CreatHitForm(BaseForm):
     env: str = Field(..., title='环境')
     project_id: int = Field(..., title='服务id')
     report_id: int = Field(..., title='测试报告id')
-    desc: Optional[str] = Field(title='描述')
+    desc: Optional[str] = Field(None, title='描述')
 
     async def validate_request(self, *args, **kwargs):
         self.date = self.date[0:10]

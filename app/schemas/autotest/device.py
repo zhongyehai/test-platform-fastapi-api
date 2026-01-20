@@ -1,6 +1,5 @@
 from typing import Optional, List
 
-import validators
 from pydantic import Field
 
 from ..base_form import BaseForm, PaginationForm, ChangeSortForm
@@ -8,10 +7,10 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 class GetServerListForm(PaginationForm):
     """ 获取服务器列表 """
-    name: Optional[str] = Field(title="服务器名")
-    os: Optional[str] = Field(title="服务器系统类型")
-    ip: Optional[str] = Field(title="服务器ip")
-    port: Optional[str] = Field(title="服务器端口")
+    name: Optional[str] = Field(None, title="服务器名")
+    os: Optional[str] = Field(None, title="服务器系统类型")
+    ip: Optional[str] = Field(None, title="服务器ip")
+    port: Optional[str] = Field(None, title="服务器端口")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -52,9 +51,9 @@ class EditServerForm(GetServerForm, AddAppiumServerDataForm):
 class GetPhoneListForm(PaginationForm):
     """ 获取运行设备列表 """
 
-    name: Optional[str] = Field(title="运行设备名")
-    os: Optional[str] = Field(title="运行设备系统类型")
-    os_version: Optional[str] = Field(title="运行设备系统版本")
+    name: Optional[str] = Field(None, title="运行设备名")
+    os: Optional[str] = Field(None, title="运行设备系统类型")
+    os_version: Optional[str] = Field(None, title="运行设备系统版本")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

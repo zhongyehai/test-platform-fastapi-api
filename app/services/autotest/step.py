@@ -67,7 +67,7 @@ async def add_step(request: Request, form: schema.AddStepForm):
     models = ModelSelector(request.app.test_type)
     await form.validate_request()
 
-    add_step_data = form.dict()
+    add_step_data = form.model_dump()
     add_step_data["num"] = await models.step.get_insert_num()
     step = await models.step.model_create(add_step_data, request.state.user)
     await models.case.merge_variables(step.quote_case, step.case_id)

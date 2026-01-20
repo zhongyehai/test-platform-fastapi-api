@@ -30,7 +30,7 @@ async def get_data_pool_detail(request: Request, form: schema.GetDataPoolForm = 
 
 
 async def add_data_pool(request: Request, form: schema.PostDataPoolForm):
-    data_pool = await DataPool.model_create(form.dict(), request.state.user)
+    data_pool = await DataPool.model_create(form.model_dump(), request.state.user)
     return request.app.post_success(data=data_pool)
 
 

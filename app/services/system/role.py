@@ -34,7 +34,7 @@ async def get_role_detail(request: Request, form: schema.GetRoleForm = Depends()
 
 
 async def add_role(request: Request, form: schema.CreateRoleForm):
-    data = form.dict()
+    data = form.model_dump()
     front_permission, api_permission = data.pop("front_permission"), data.pop("api_permission")
     data["max_num"] = await Role.get_max_num() + 1
     role = await Role.model_create(data, request.state.user)
@@ -44,7 +44,7 @@ async def add_role(request: Request, form: schema.CreateRoleForm):
 
 async def change_role(request: Request, form: schema.EditRoleForm):
     role = await Role.validate_is_exist("数据不存在", id=form.id)
-    data = form.dict()
+    data = form.model_dump()
     front_permission, api_permission = data.pop("front_permission"), data.pop("api_permission")
     await role.model_update(data, request.state.user)
     await role.update_role_permissions([*front_permission, *api_permission])

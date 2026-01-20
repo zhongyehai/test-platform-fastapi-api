@@ -12,11 +12,11 @@ from utils.util.file_util import FileUtil
 
 class FindScriptForm(PaginationForm):
     """ 查找脚本form """
-    detail: Optional[str] = Field(title="是否获取更多数据")
-    file_name: Optional[str] = Field(title="脚本名")
-    script_type: Optional[str] = Field(title="脚本类型")
-    create_user: Optional[int] = Field(title="创建者")
-    update_user: Optional[int] = Field(title="修改者")
+    detail: Optional[str] = Field(None, title="是否获取更多数据")
+    file_name: Optional[str] = Field(None, title="脚本名")
+    script_type: Optional[str] = Field(None, title="脚本类型")
+    create_user: Optional[int] = Field(None, title="创建者")
+    update_user: Optional[int] = Field(None, title="修改者")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -51,7 +51,7 @@ class CreatScriptForm(BaseForm):
     """ 创建自定义脚本文件 """
     name: str = Field(..., title="脚本文件名")
     script_type: str = Field(..., title="脚本类型")
-    desc: Optional[str] = Field(title="脚本描述")
+    desc: Optional[str] = Field(None, title="脚本描述")
     script_data: str = Field(..., title="脚本内容")
 
     async def validate_script_name(self, *args, **kwargs):

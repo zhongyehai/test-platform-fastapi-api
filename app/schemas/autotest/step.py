@@ -39,17 +39,17 @@ class ChangeStepStatusForm(BaseForm):
 
 class CopyStepForm(GetStepForm):
     """ 复制步骤 """
-    case_id: Optional[int] = Field(title="要复制到的用例id")
+    case_id: Optional[int] = Field(None, title="要复制到的用例id")
 
 
 class AddStepForm(BaseForm):
     """ 添加步骤校验 """
     case_id: int = Field(..., title="步骤所属的用例id")
-    quote_case: Optional[int] = Field(title="引用用例id（步骤为引用用例时必传）")
+    quote_case: Optional[int] = Field(None, title="引用用例id（步骤为引用用例时必传）")
     name: str = Field(..., title="步骤名称")
     desc: Optional[str] = Field('', title="步骤描述")
-    up_func: Optional[list] = Field(default=[], title="前置条件")
-    down_func: Optional[list] = Field(default=[], title="后置条件")
+    up_func: Optional[list] = Field([], title="前置条件")
+    down_func: Optional[list] = Field([], title="后置条件")
     skip_if: List[SkipIfModel] = Field(..., title="跳过条件")
     run_times: int = Field(1, title="执行次数")
     extracts: List[ExtractModel] = Field(..., title="数据提取")
@@ -83,10 +83,10 @@ class AddStepForm(BaseForm):
         self.validate_is_true(f"不能自己引用自己", self.quote_case != self.case_id)
 
         if not self.quote_case:
-            self.validate_api_extracts([data.dict() for data in self.extracts if data])
-            self.validate_base_validates([data.dict() for data in self.validates if data])
+            self.validate_api_extracts([data.model_dump() for data in self.extracts if data])
+            self.validate_base_validates([data.model_dump() for data in self.validates if data])
             if self.data_form:
-                self.validate_variable_format([data.dict() for data in self.data_form if data], msg_title='form-data')
+                self.validate_variable_format([data.model_dump() for data in self.data_form if data], msg_title='form-data')
 
     async def validate_request(self, *args, **kwargs):
         await self.validate_add_step_request()

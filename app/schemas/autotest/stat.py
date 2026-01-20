@@ -11,6 +11,6 @@ class UseCountForm(BaseForm):
 
 class AnalyseForm(BaseForm):
     business_id: int = Field(..., title="业务线id")
-    trigger_type: Optional[TriggerTypeEnum] = Field(title="触发类型")
-    start_time: Optional[str] = Field(title="开始时间")
-    end_time: Optional[str] = Field(title="结束时间")
+    trigger_type: Optional[TriggerTypeEnum] = Field(None, title="触发类型")
+    start_time: Optional[str] = Field(None, title="开始时间")
+    end_time: Optional[str] = Field(None, title="结束时间")

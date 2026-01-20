@@ -7,11 +7,11 @@ from ..base_form import PaginationForm, BaseForm, ChangeSortForm
 
 class GetDataPoolListForm(PaginationForm):
     """ 获取数据池列表/新增数据池数据 """
-    env: Optional[str] = Field(title="环境")
-    mobile: Optional[str] = Field(title="手机号")
-    business_order_no: Optional[str] = Field(title="订单号")
-    business_status: Optional[str] = Field(title="业务状态")
-    use_status: Optional[str] = Field(title="使用状态")
+    env: Optional[str] = Field(None, title="环境")
+    mobile: Optional[str] = Field(None, title="手机号")
+    business_order_no: Optional[str] = Field(None, title="订单号")
+    business_status: Optional[str] = Field(None, title="业务状态")
+    use_status: Optional[str] = Field(None, title="使用状态")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -52,7 +52,7 @@ class PutDataPoolForm(GetDataPoolForm, PostDataPoolForm):
 
 class GetAutoTestUserDataListForm(PaginationForm):
     """ 获取自动化用户数据 """
-    env: Optional[str] = Field(title="环境")
+    env: Optional[str] = Field(None, title="环境")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

@@ -7,11 +7,11 @@ from app.schemas.enums import DataStatusEnum
 
 class FindUserForm(PaginationForm):
     """ 查找用户参数校验 """
-    name: Optional[str] = Field(title="用户名")
-    account: Optional[str] = Field(title="账号")
-    detail: Optional[str] = Field(title="是否获取用户详情")
-    status: Optional[DataStatusEnum] = Field(title="状态")
-    role_id: Optional[int] = Field(title="角色id")
+    name: Optional[str] = Field(None, title="用户名")
+    account: Optional[str] = Field(None, title="账号")
+    detail: Optional[str] = Field(None, title="是否获取用户详情")
+    status: Optional[DataStatusEnum] = Field(None, title="状态")
+    role_id: Optional[int] = Field(None, title="角色id")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

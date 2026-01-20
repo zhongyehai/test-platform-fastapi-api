@@ -311,7 +311,7 @@ _tortoise_orm_conf = {
                 'app.models.system.model_factory',
                 'app.models.config.model_factory',
                 'app.models.assist.model_factory',
-                'app.models.manage.model_factory',
+                'app.models.manage.model_factory'
             ],
             "default_connection": "default",  # 数据库迁移会用到
         }

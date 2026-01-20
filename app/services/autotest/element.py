@@ -89,7 +89,7 @@ async def add_element(request: Request, form: schema.AddElementForm):
         "module_id": form.module_id,
         "page_id": form.page_id,
         "num": max_num + index + 1,
-        **element.dict()} for index, element in enumerate(form.element_list)]
+        **element.model_dump()} for index, element in enumerate(form.element_list)]
     await models.element.batch_insert(data_list, request.state.user)
     return request.app.post_success()
 

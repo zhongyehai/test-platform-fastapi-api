@@ -48,7 +48,7 @@ async def make_contact_list(request: Request, form: MakeContactModel):
     # 数据解析为通讯录格式
     contact_text = ''
     for index, data in enumerate(form.data_list):
-        dict_data = data.dict()
+        dict_data = data.model_dump()
         if index >= form.count:
             break
         contact_text += f'BEGIN:VCARD\nVERSION:2.1\nFN:{dict_data.get("name", f"name_{index}")}\nTEL;CELL:{dict_data.get("phone_number", "")}\nEND:VCARD\n'

@@ -40,7 +40,7 @@ async def add_page(request: Request, form: schema.AddPageForm):
         "project_id": form.project_id,
         "module_id": form.module_id,
         "num": max_num + index + 1,
-        **page.dict()} for index, page in enumerate(form.page_list)]
+        **page.model_dump()} for index, page in enumerate(form.page_list)]
 
     if len(page_list) == 1:
         return request.app.post_success(data=dict(await models.page.create(**page_list[0])))

@@ -7,10 +7,10 @@ from app.schemas.enums import ApiCaseSuiteTypeEnum
 
 class FindCaseSuite(PaginationForm):
     """ 查找用例集合 """
-    name: Optional[str] = Field(title="用例集名")
-    suite_type: Optional[list] = Field(title="用例集类型")
+    name: Optional[str] = Field(None, title="用例集名")
+    suite_type: Optional[list] = Field(None, title="用例集类型")
     project_id: int = Field(..., title="服务id")
-    parent: Optional[int] = Field(title="上级用例集")
+    parent: Optional[int] = Field(None, title="上级用例集")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -35,7 +35,7 @@ class AddCaseSuiteForm(BaseForm):
     suite_type: ApiCaseSuiteTypeEnum = Field(
         ..., title="用例集类型",
         description="base: 基础用例集，api: 单接口用例集，process: 流程用例集，make_data: 造数据用例集")
-    parent: Optional[int] = Field(title="父用例集id")
+    parent: Optional[int] = Field(None, title="父用例集id")
     data_list: List[str] = Field(..., title="用例集名称list")
 
 
@@ -47,7 +47,7 @@ class EditCaseSuiteForm(GetCaseSuiteForm):
     suite_type: ApiCaseSuiteTypeEnum = Field(
         ..., title="用例集类型",
         description="base: 基础用例集，api: 单接口用例集，process: 流程用例集，assist: 造数据用例集")
-    parent: Optional[int] = Field(title="父用例集id")
+    parent: Optional[int] = Field(None, title="父用例集id")
 
 
 class CopyCaseSuiteForm(GetCaseSuiteForm):

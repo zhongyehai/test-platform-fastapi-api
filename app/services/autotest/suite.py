@@ -157,7 +157,7 @@ async def change_suite(request: Request, form: schema.EditCaseSuiteForm):
     if form.parent is None and form.suite_type != suite.suite_type:
         suite.suite_type = form.suite_type
         await suite.update_children_suite_type()
-    return request.app.put_success(form.dict())
+    return request.app.put_success(form.model_dump())
 
 
 async def delete_suite(request: Request, form: schema.GetCaseSuiteForm):

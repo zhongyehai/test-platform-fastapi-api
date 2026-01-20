@@ -50,7 +50,7 @@ async def get_server_detail(request: Request, form: schema.GetServerForm = Depen
 
 
 async def add_server(request: Request, form: schema.AddServerForm):
-    await Server.batch_insert([data.dict() for data in form.data_list], request.state.user)
+    await Server.batch_insert([data.model_dump() for data in form.data_list], request.state.user)
     return request.app.post_success()
 
 
@@ -90,7 +90,7 @@ async def get_phone_detail(request: Request, form: schema.GetPhoneForm = Depends
 
 
 async def add_phone(request: Request, form: schema.AddPhoneForm):
-    await Phone.batch_insert([data.dict() for data in form.data_list], request.state.user)
+    await Phone.batch_insert([data.model_dump() for data in form.data_list], request.state.user)
     return request.app.post_success()
 
 

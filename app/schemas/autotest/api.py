@@ -9,7 +9,7 @@ from app.schemas.enums import ApiMethodEnum, DataStatusEnum, ApiBodyTypeEnum
 class ApiListForm(PaginationForm):
     """ 查询接口信息 """
     module_id: int = Field(..., title="模块id")
-    name: Optional[str] = Field(title="接口名")
+    name: Optional[str] = Field(None, title="接口名")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -34,8 +34,8 @@ class ChangeStatus(GetApiForm):
 
 class GetApiFromForm(BaseForm):
     """ 查询api归属 """
-    id: Optional[int] = Field(title="接口id")
-    api_addr: Optional[str] = Field(title="接口地址")
+    id: Optional[int] = Field(None, title="接口id")
+    api_addr: Optional[str] = Field(None, title="接口地址")
 
     async def validate_request(self, *args, **kwargs):
         self.validate_is_true("请传入接口地址或接口id", self.id or self.api_addr)
@@ -58,7 +58,7 @@ class EditApiForm(GetApiForm):
     project_id: int = Field(..., title="服务id")
     module_id: int = Field(..., title="模块id")
     name: str = Field(..., title="接口名")
-    desc: Optional[str] = Field(title="备注")
+    desc: Optional[str] = Field(None, title="备注")
     method: ApiMethodEnum = Field(..., title="请求方法")
     addr: str = Field(..., title="接口地址")
     headers: List[ParamModel] = Field(title="头部信息")
@@ -67,16 +67,16 @@ class EditApiForm(GetApiForm):
     data_form: List[DataFormModel] = Field(title="data-form参数")
     data_json: Union[list, dict] = Field(title="json参数")
     data_urlencoded: dict = Field(title="urlencoded参数")
-    data_text: Optional[str] = Field(title="文本参数")
+    data_text: Optional[str] = Field(None, title="文本参数")
     extracts: List[ExtractModel] = Field(title="提取信息")
     validates: List[ValidateModel] = Field(title="断言信息")
-    time_out: Optional[int] = Field(title="请求超时时间")
+    time_out: Optional[int] = Field(None, title="请求超时时间")
 
     async def validate_add_api_request(self, *args, **kwargs):
         # 校验数据结构
-        self.validate_api_extracts([extract.dict() for extract in self.extracts])
-        self.validate_base_validates([validate.dict() for validate in self.validates])
-        self.validate_variable_format([data_form.dict() for data_form in self.data_form], msg_title='form-data')
+        self.validate_api_extracts([extract.model_dump() for extract in self.extracts])
+        self.validate_base_validates([validate.model_dump() for validate in self.validates])
+        self.validate_variable_format([data_form.model_dump() for data_form in self.data_form], msg_title='form-data')
 
     async def validate_request(self, *args, **kwargs):
         self.validate_is_true(self.addr, "接口地址必填")

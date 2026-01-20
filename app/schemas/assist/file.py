@@ -6,9 +6,9 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 class GetFileListForm(PaginationForm):
     """ 获取文件列表 """
-    page_size: Optional[int] = Field(default=1)
-    page_no: Optional[int] = Field(default=20)
-    file_type: Optional[str] = Field(default="case", title='文件类型')
+    page_size: Optional[int] = Field(1)
+    page_no: Optional[int] = Field(20)
+    file_type: Optional[str] = Field("case", title='文件类型')
 
 
 class CheckFileIsExistsForm(BaseForm):

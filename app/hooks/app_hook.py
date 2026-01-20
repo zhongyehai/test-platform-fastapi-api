@@ -12,12 +12,10 @@ def register_app_hook(app):
 
         app.conf, app.logger = config, logger
 
-        # 注册orm
-        register_tortoise(
-            app,
-            config=config._tortoise_orm_conf,
-            add_exception_handlers=True
-        )
+        # await Tortoise.init(
+        #     config=config._tortoise_orm_conf
+        # )
+        # await Tortoise.generate_schemas()
 
         # 注册蓝图
         from app.routers.autotest import api_test, app_test, ui_test
@@ -41,7 +39,7 @@ def register_app_hook(app):
 
     @app.on_event("shutdown")
     async def shutdown_event():
-        await Tortoise.close_connections()
+        # await Tortoise.close_connections()
         app.logger.info(f'\n\n\n{"*" * 20} 服务【{app.title}】关闭完成 {"*" * 20}\n\n\n'"")
         if config.is_linux:
             await send_server_status(config.AuthInfo.SECRET_KEY, app.title, action_type='关闭')

@@ -346,69 +346,232 @@ async def get_pull_swagger_log(request: Request, form: schema.GetPullLogForm = D
     return request.app.get_success(data=data)
 
 
-async def pull_by_apifox(addr: str, cookies: str):
-    """ 从apifox拉数据 """
-    async with httpx.AsyncClient(verify=False) as client:
-        res = await client.get(addr, headers={"cookie": cookies})
-        if res.status_code != 200:
-            raise Exception(f"获取apifox数据失败：{res.text}")
-        data_list = res.json()
+class PullApiFox:
 
-    common_user_id = await User.filter(account="common").first().values("id")
-    common_business_id = await BusinessLine.filter(code="common").first().values("id")
-    for project_data in data_list:
-        if project_data.get("folder") is None:  # 直接放在最外层的接口
-            continue
-        project_name = project_data["name"]
-        print(f'服务：【{project_name}】')
+    def __init__(self, project_id: int, cookies: str):
+        self.project_id = project_id
+        self.cookies = cookies
+        self.json_schema = {}
+        self.parsed_json_schema = {}
+        self.api_args_dict = {}
 
-        db_project = await ApiProject.filter(source_type="apifox", source_id=project_data["folder"]["id"]).first()
-        if db_project is None:
-            db_project = await ApiProject.create(**{
-                "name": project_name,
-                "manager": common_user_id["id"],
-                "business_id": common_business_id["id"],
-                "source_type": "apifox",
-                "source_name": project_name,
-                "source_addr": addr,
-                "source_id": project_data["folder"]["id"]
-            })
-            await ApiCaseSuite.model_create({"name": "基础用例集", "suite_type": "base", "project_id": db_project.id})
-            await ApiCaseSuite.model_create({"name": "引用用例集", "suite_type": "quote", "project_id": db_project.id})
-            await ApiCaseSuite.model_create({"name": "单接口用例集", "suite_type": "api", "project_id": db_project.id})
-            await ApiCaseSuite.model_create(
-                {"name": "流程用例集", "suite_type": "process", "project_id": db_project.id})
-            await ApiCaseSuite.model_create(
-                {"name": "造数据用例集", "suite_type": "make_data", "project_id": db_project.id})
+    async def pull_data(self, url):
+        async with httpx.AsyncClient(verify=False) as client:
+            response = await client.get(
+                url,
+                headers={
+                    "x-project-id": f"{self.project_id}",
+                    "cookie": self.cookies,
+                    "x-client-version": "2.8.2-alpha.2"
+                },
+                timeout=30
+            )
+        return response.json()["data"]
 
-        for module_index, module_data in enumerate(project_data["children"]):
-            print(f'模块：【{module_data["name"]}】')
-            db_module = await ApiModule.filter(project_id=db_project.id, source_id=module_data["folder"]["id"]).first()
-            if db_module is None:
-                db_module = await ApiModule.create(**{
-                    "controller": module_data["name"],
-                    "name": module_data["name"],
-                    "parent": None,
-                    "project_id": db_project.id,
-                    "num": module_index,
-                    "source_id": module_data["folder"]["id"]
-                })
+    async def pull_api_tree(self):
+        response_data = await self.pull_data(
+            f"https://api.apifox.com/api/v1/projects/{self.project_id}/api-tree-list?locale=zh-CN"
+        )
+        return response_data
 
-            for api_index, api_data in enumerate(module_data["children"]):
-                print(f'接口：【{api_data["api"]}】')
-                api = await ApiMsg.filter(module_id=db_module.id, source_id=api_data["api"]["id"]).first()
-                if api is None:
-                    await ApiMsg.create(**{
-                        "name": api_data["api"]["name"],
-                        "method": api_data["api"].get("method", "POST").upper(),
-                        "addr": api_data["api"]["path"],
-                        "status": DataStatusEnum.ENABLE.value if api_data["api"]["status"] == "released" else DataStatusEnum.DISABLE.value,
-                        "time_out": 60,
-                        "num": api_index,
-                        "project_id": db_project.id,
-                        "module_id": db_module.id,
-                        "source_id": api_data["api"]["id"]
+    async def pull_json_schema(self):
+        response_data = await self.pull_data(
+            f'https://api.apifox.com/api/v1/projects/{self.project_id}/data-schemas?locale=zh-CN'
+        )
+        json_schema = {}
+        for item in response_data:
+            if item["description"] != "java.lang.Object":
+                json_schema[item["id"]] = item["jsonSchema"]
+        self.json_schema = json_schema
+        return self
+
+    def parse_json_schema(self):
+        parsed_data = {}
+
+        def parse_schema(schema):
+            data, required_list, schema_data_type = {}, schema.get("required", []), schema["type"]  # "object"、 "array"
+            if "properties" in schema:  # 第一层
+                schema = schema["properties"]
+
+            for field, field_object in schema.items():
+                if field_object.get("$ref"):
+                    ref_id = field_object["$ref"].split("/")[-1]
+                    data[field] = [parse_schema(self.json_schema[int(ref_id)])]
+                elif field_object["type"] not in ["object", "array"]:  # 基础数据类型
+                    is_required = '必填' if field in required_list else "非必填"
+                    data[field] = f'{is_required}; {field_object["type"]}; {field_object.get("description", "")}'
+
+                elif field_object["type"] == "array":  # 数组
+                    if field_object["items"].get("$ref"):
+                        ref_id = field_object["items"]["$ref"].split("/")[-1]
+                        data[field] = [parse_schema(self.json_schema[int(ref_id)])]
+                    else:
+                        data[field] = [f'{field_object["items"]["type"]}; {field_object.get("description", "")}']
+
+            if schema_data_type == "array":
+                data = [data]
+
+            return data
+
+        for schema_id, schema_data in self.json_schema.items():
+            parsed_data[schema_id] = parse_schema(schema_data)
+
+        self.parsed_json_schema = parsed_data
+        return self
+
+    async def pull_api_detail(self):
+        api_detail_response = await self.pull_data(
+            f"https://api.apifox.com/api/v1/api-details?locale=zh-CN"
+        )
+        api_dict = {}
+        for api_item in api_detail_response:
+            params, data_json, data_form = [], {}, [{"key": None, "value": None, "remark": None, "data_type": None}]
+            body_type = api_item.get("requestBody", {}).get(
+                "type")  # "multipart/form-data" / "application/json" / "none"
+
+            # 解析 parameters 和 path
+            for item in ["path", "query"]:
+                for data in api_item["parameters"][item]:
+                    params.append({
+                        "key": data["name"],
+                        "value": "",
+                        "remark": f'{data["type"]}; {"必填" if data["required"] else "非必填"}; {data.get("description")}; {data.get("example")}'
                     })
+            else:
+                if len(params) == 0:
+                    params.append({"key": None, "value": None, "remark": None})
+
+            # 解析 body
+            if api_item["requestBody"].get("type") == "application/json":
+                if api_item["requestBody"]["jsonSchema"].get("type") == "array":  # list
+                    ref = api_item["requestBody"]["jsonSchema"]["items"].get("$ref")
+                    if ref:
+                        data_json = [self.parsed_json_schema.get(int(ref.split("/")[-1]), {})]
+                    else:
+                        data_json = []
+                else:  # dict
+                    ref = api_item["requestBody"]["jsonSchema"].get("$ref")
+                    if ref:
+                        data_json = self.parsed_json_schema.get(int(ref.split("/")[-1]), {})
+                    else:
+                        data_json = {}
+            elif api_item["requestBody"].get("type") == "multipart/form-data":
+                data_form = [{
+                    "key": item["name"],
+                    "value": "",
+                    "data_type": item["type"],
+                    "remark": f'{item["type"]}; {"必填" if item["required"] else "非必填"}; {item["description"]}'}
+                    for item in api_item["requestBody"]["parameters"]
+                ]
+
+            # 解析 responses
+            responses_type = api_item["responses"][0]["jsonSchema"].get("type")
+            if responses_type in ["integer", "string"]:
+                # responses = f'{api_item["responses"][0]["jsonSchema"]["type"]}; {api_item["responses"][0]["jsonSchema"]["description"]}'
+                responses = {}
+            elif api_item["responses"][0]["jsonSchema"].get("type") == "array":  # list
+                ref_id = api_item["responses"][0]["jsonSchema"]["items"]["$ref"].split("/")[-1]
+                responses = [self.parsed_json_schema.get(int(ref_id), {})]
+            else:
+                ref = api_item["responses"][0]["jsonSchema"].get("$ref")
+                responses = self.parsed_json_schema.get(int(ref.split("/")[-1]), {}) if ref else {}
+
+            api_dict[api_item["id"]] = {
+                "body_type": "json" if body_type == "application/json" else "form" if body_type == "multipart/form-data" else "text",
+                "params": params,
+                "data_json": data_json,
+                "data_form": data_form,
+                "response": responses
+            }
+        self.api_args_dict = api_dict
+        return self
+
+    async def pull_api_from_apifox(self):
+        project_count, module_count, api_count, new_api = 0, 0, 0, []
+        project_response = await self.pull_api_tree()
+        common_user_id = await User.filter(account="common").first().values("id")
+        common_business_id = await BusinessLine.filter(code="common").first().values("id")
+
+        for project_data in project_response:
+            if project_data.get("folder") is None:  # 直接放在最外层的接口
+                continue
+            project_name = project_data["name"]
+            db_project = await ApiProject.filter(name=project_name).first()
+            if db_project is None:
+                db_project = await ApiProject.create(**{
+                    "name": project_name,
+                    "manager": common_user_id["id"],
+                    "business_id": common_business_id["id"],
+                    "source_type": "apifox",
+                    "source_name": project_name,
+                    "source_addr": f"https://api.apifox.com/api/v1/projects/{self.project_id}/api-tree-list?locale=zh-CN",
+                    "source_id": project_data["folder"]["id"]
+                })
+                await ApiCaseSuite.model_create(
+                    {"name": "基础用例集", "suite_type": "base", "project_id": db_project.id})
+                await ApiCaseSuite.model_create(
+                    {"name": "引用用例集", "suite_type": "quote", "project_id": db_project.id})
+                await ApiCaseSuite.model_create(
+                    {"name": "单接口用例集", "suite_type": "api", "project_id": db_project.id})
+                await ApiCaseSuite.model_create(
+                    {"name": "流程用例集", "suite_type": "process", "project_id": db_project.id})
+                await ApiCaseSuite.model_create(
+                    {"name": "造数据用例集", "suite_type": "make_data", "project_id": db_project.id})
+                project_count += 1
+
+            for module_index, module_data in enumerate(project_data["children"]):
+                db_module = await ApiModule.filter(name=module_data["name"], project_id=db_project.id).first()
+                if db_module is None:
+                    db_module = await ApiModule.create(
+                        **{
+                            "controller": module_data["name"],
+                            "name": module_data["name"],
+                            "parent": None,
+                            "project_id": db_project.id,
+                            "num": module_index,
+                            "source_id": module_data["folder"]["id"]
+                        }
+                    )
+                    module_count += 1
+                else:
+                    await db_module.filter(id=db_module.id).update(**{"source_id": module_data["folder"]["id"]})
+
+                for api_index, api_data in enumerate(module_data["children"]):
+                    json_api_id = api_data["api"]["id"]
+                    api = await ApiMsg.filter(
+                        module_id=db_module.id,
+                        addr=api_data["api"]["path"],
+                        method=api_data["api"].get("method", "POST").upper(),
+                    ).first()
+
+                    if api is None:
+                        new_db_api = await ApiMsg.create(**{
+                            "name": api_data["api"]["name"],
+                            "method": api_data["api"].get("method", "POST").upper(),
+                            "addr": api_data["api"]["path"],
+                            "status": DataStatusEnum.ENABLE.value if api_data["api"][
+                                                                         "status"] == "released" else DataStatusEnum.DISABLE.value,
+                            "time_out": 60,
+                            "num": api_index,
+                            "project_id": db_project.id,
+                            "module_id": db_module.id,
+                            "source_id": json_api_id,
+                            "mock_response": self.api_args_dict[json_api_id]["response"],
+                            **self.api_args_dict[json_api_id]
+                        })
+                        new_api.append({
+                            "project_id": db_project.id,
+                            "module_id": db_module.id,
+                            "api_id": new_db_api.id,
+                            "api_addr": api_data["api"]["path"],
+                        })
+                        api_count += 1
+                    else:
+                        await ApiMsg.filter(id=api.id).update(**{
+                            "source_id": json_api_id,
+                            "mock_response": self.api_args_dict[json_api_id]["response"],
+                            **self.api_args_dict[json_api_id]
+                        })
 
 
 async def pull_swagger(request: Request, form: schema.SwaggerPullForm):
@@ -416,11 +579,20 @@ async def pull_swagger(request: Request, form: schema.SwaggerPullForm):
     # options: ['controller_name', 'api_name', 'headers', 'query', 'json', 'form', 'response']
     options, module_dict = form.options, {}
     project = await ApiProject.validate_is_exist("服务不存在", id=form.project_id)
-    pull_log = await SwaggerPullLog.model_create({"project_id": project.id, "pull_args": options, "desc": form.cookies},
-                                                 request.state.user)
+    pull_log = await SwaggerPullLog.model_create({
+        "project_id": project.id,
+        "pull_args": options,
+        "desc": form.cookies
+    }, request.state.user)
+
     if form.cookies:  # apifox
         try:
-            await pull_by_apifox(project.source_addr, form.cookies)
+            pull_api_fox = PullApiFox(project.source_id, form.cookies)
+            await pull_api_fox.pull_json_schema()
+            pull_api_fox.parse_json_schema()
+            await pull_api_fox.pull_api_detail()
+            await pull_api_fox.pull_api_from_apifox()
+            await pull_log.pull_success(project)
         except Exception as error:
             await pull_log.pull_fail(project, error.args)
             return request.app.fail(f"apifox数据拉取报错，结果为: \n{error.args}")

@@ -42,7 +42,7 @@ class AddEnvForm(BaseForm):
     async def validate_request(self, *args, **kwargs):
         env_data_list = []
         for index, data in enumerate(self.data_list):
-            data = data.dict()
+            data = data.model_dump()
             data["source_type"], data["business"] = 'addr', self.business
             env_data_list.append(data)
         return env_data_list
@@ -100,7 +100,7 @@ class AddAccountForm(BaseForm):
     async def validate_request(self, *args, **kwargs):
         data_list = []
         for index, data in enumerate(self.data_list):
-            data = data.dict()
+            data = data.model_dump()
             data["source_type"], data["parent"] = 'account', self.parent
             data_list.append(data)
         return data_list

@@ -130,7 +130,7 @@ async def add_case(request: Request, form: schema.AddCaseForm):
     data_list = [{
         "suite_id": form.suite_id,
         "num": max_num + index + 1,
-        **case.dict()
+        **case.model_dump()
     } for index, case in enumerate(form.case_list)]
 
     if len(data_list) == 1:

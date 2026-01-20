@@ -7,7 +7,7 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 class FindErrorForm(PaginationForm):
     """ 查找错误记录列表form """
 
-    name: Optional[str] = Field(title='函数名')
+    name: Optional[str] = Field(None, title='函数名')
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

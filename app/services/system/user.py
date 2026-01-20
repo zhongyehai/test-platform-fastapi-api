@@ -48,7 +48,7 @@ async def add_user(request: Request, form: schema.CreateUserForm):
 async def change_user(request: Request, form: schema.EditUserForm):
     await form.validate_request()
     user = await User.validate_is_exist("用户不存在", id=form.id)
-    user_dict = form.dict()
+    user_dict = form.model_dump()
     if user_dict.get("email_password") is None:
         user_dict.pop("email_password")
     role_list = user_dict.pop("role_list")

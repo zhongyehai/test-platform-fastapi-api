@@ -91,7 +91,7 @@ async def get_config_detail(request: Request, form: schema.GetConfigForm = Depen
 
 
 async def add_config(request: Request, form: schema.PostConfigForm):
-    await Config.model_create(form.dict(), request.state.user)
+    await Config.model_create(form.model_dump(), request.state.user)
     return request.app.post_success()
 
 

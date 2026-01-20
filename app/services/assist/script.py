@@ -81,7 +81,7 @@ async def get_script(request: Request, form: schema.GetScriptForm = Depends()):
 async def add_script(request: Request, form: schema.CreatScriptForm):
     save_func_permissions = await Config.get_save_func_permissions()
     await form.validate_request(request.state.user, save_func_permissions)
-    script = await Script.model_create(form.dict(), request.state.user)
+    script = await Script.model_create(form.model_dump(), request.state.user)
     return request.app.post_success({"id": script.id})
 
 

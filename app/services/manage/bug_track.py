@@ -36,7 +36,7 @@ async def get_bug_track_detail(request: Request, form: schema.GetBugForm = Depen
 
 async def add_bug_track(request: Request, form: schema.AddBugForm):
     await form.validate_request(request)
-    await BugTrack.model_create(form.dict(), request.state.user)
+    await BugTrack.model_create(form.model_dump(), request.state.user)
     return request.app.post_success()
 
 

@@ -1,11 +1,12 @@
 from fastapi.staticfiles import StaticFiles
 from fastapi.openapi.docs import get_swagger_ui_html
+from tortoise.contrib.fastapi import register_tortoise
 
 from app.routers.base_view import FastAPI
 from app.hooks.error_hook import register_exception_handler
 from app.hooks.request_hook import register_request_hook
 from app.hooks.app_hook import register_app_hook
-from config import ServerInfo
+from config import ServerInfo, _tortoise_orm_conf
 
 app = FastAPI(
     openapi_version="3.0.0",
@@ -17,6 +18,14 @@ app = FastAPI(
 )
 app.title = "主程序服务"
 app.mount('/static', StaticFiles(directory='static'))
+
+# 注册orm
+register_tortoise(
+    app,
+    config=_tortoise_orm_conf,
+    generate_schemas=True,
+    add_exception_handlers=True,
+)
 
 # 注册钩子函数
 register_app_hook(app)

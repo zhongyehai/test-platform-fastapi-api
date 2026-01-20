@@ -43,7 +43,7 @@ async def add_module(request: Request, form: schema.AddModuleForm):
 async def change_module(request: Request, form: schema.EditModuleForm):
     models = ModelSelector(request.app.test_type)
     await models.module.filter(id=form.id).update(**form.get_update_data(request.state.user.id))
-    return request.app.put_success(data=form.dict())
+    return request.app.put_success(data=form.model_dump())
 
 
 async def delete_module(request: Request, form: schema.GetModuleForm):

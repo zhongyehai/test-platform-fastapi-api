@@ -11,11 +11,11 @@ from app.schemas.enums import CaseStatusEnum
 
 class FindCaseForm(PaginationForm):
     """ 根据用例集查找用例 """
-    name: Optional[str] = Field(title="用例名")
+    name: Optional[str] = Field(None, title="用例名")
     status: Optional[int] = Field(
-        title="用例调试状态",
+        None, title="用例调试状态",
         description="0未调试-不执行，1调试通过-要执行，2调试通过-不执行，3调试不通过-不执行，默认未调试-不执行")
-    has_step: Optional[int] = Field(title="标识用例下是否有步骤")
+    has_step: Optional[int] = Field(None, title="标识用例下是否有步骤")
     suite_id: int = Field(..., title="用例集")
 
     def get_query_filter(self, *args, **kwargs):
@@ -87,7 +87,7 @@ class EditCaseForm(GetCaseForm):
         1.校验是否存在引用了自定义函数但是没有引用脚本文件的情况
         2.校验是否存在引用了自定义变量，但是自定义变量未声明的情况
         """
-        variables = [variable.dict() for variable in self.variables]
+        variables = [variable.model_dump() for variable in self.variables]
         self.validate_variable_format(variables)  # 校验格式
         self.validate_func(all_func_name, content=self.dumps(variables))  # 校验引用的自定义函数
         self.validate_variable(all_variables, self.dumps(variables), "自定义变量")  # 校验变量
@@ -98,7 +98,7 @@ class EditCaseForm(GetCaseForm):
         2.校验是否存在引用了自定义变量，但是自定义变量未声明的情况
         """
         if self.headers:
-            headers = [header.dict() for header in self.headers]
+            headers = [header.model_dump() for header in self.headers]
             self.validate_header_format(headers)  # 校验格式
             self.validate_func(all_func_name, content=self.dumps(headers))  # 校验引用的自定义函数
             self.validate_variable(all_variables, self.dumps(headers), "头部信息")  # 校验引用的变量
@@ -111,7 +111,7 @@ class EditCaseForm(GetCaseForm):
 
         # 合并环境的变量和case的变量
         variables = kwargs["project_env_variables"]
-        variables.extend([variable.dict() for variable in self.variables])
+        variables.extend([variable.model_dump() for variable in self.variables])
         all_variables = {variable.get("key"): variable.get("value") for variable in variables if variable.get("key")}
 
         self.validate_variables(all_func_name, all_variables)
@@ -122,14 +122,14 @@ class RunCaseForm(BaseForm):
     """ 运行用例 """
     id_list: List[int] = Field(..., title="用例id list")
     env_list: List[str] = Field(..., title="运行环境code", min_length=1)
-    temp_variables: Optional[dict] = Field(title="临时指定参数")
-    is_async: int = Field(default=0, title="执行模式", description="0：用例维度串行执行，1：用例维度并行执行")
-    tigger_type: Optional[str] = Field(default=0, title="触发类型")
-    browser: Optional[str] = Field(default="chrome", title="运行浏览器（ui自动化必传）")
-    server_id: Optional[int] = Field(title="执行服务器（app自动化必传）")
-    phone_id: Optional[int] = Field(title="执行手机（app自动化必传）")
-    no_reset: Optional[bool] = Field(default=False, title="是否不重置手机（app自动化必传）")
-    insert_to: Optional[int] = Field(default=None, title="要插入到的报告id", description="把结果、执行记录，插入到指定的报告下")
+    temp_variables: Optional[dict] = Field(None, title="临时指定参数")
+    is_async: int = Field(0, title="执行模式", description="0：用例维度串行执行，1：用例维度并行执行")
+    tigger_type: Optional[str] = Field(0, title="触发类型")
+    browser: Optional[str] = Field("chrome", title="运行浏览器（ui自动化必传）")
+    server_id: Optional[int] = Field(None, title="执行服务器（app自动化必传）")
+    phone_id: Optional[int] = Field(None, title="执行手机（app自动化必传）")
+    no_reset: Optional[bool] = Field(False, title="是否不重置手机（app自动化必传）")
+    insert_to: Optional[int] = Field(None, title="要插入到的报告id", description="把结果、执行记录，插入到指定的报告下")
 
     async def validate_request(self, project_model, project_env_model, case_suite_model, case_model, *args, **kwargs):
 

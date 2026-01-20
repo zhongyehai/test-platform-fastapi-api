@@ -43,7 +43,7 @@ async def add_run_env(request: Request, form: schema.PostRunEnvForm):
     await form.validate_request()
     max_num = await RunEnv.get_max_num()
     for index, add_env in enumerate(form.env_list):
-        add_data = add_env.dict()
+        add_data = add_env.model_dump()
         add_data["num"] = max_num + index + 1
         run_env = await RunEnv.model_create(add_data, request.state.user)
 

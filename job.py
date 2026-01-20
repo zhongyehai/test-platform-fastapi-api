@@ -26,12 +26,12 @@ register_tortoise(
 @job.on_event('startup')
 async def init_scheduler_job():
     """ 初始化定时任务 """
-    await Tortoise.init(_tortoise_orm_conf, timezone="Asia/Shanghai")  # 数据库链接
+    # await Tortoise.init(_tortoise_orm_conf, timezone="Asia/Shanghai")  # 数据库链接
     # await Tortoise.generate_schemas(safe=True)
 
     task_list = await Tortoise.get_connection("default").execute_query_dict("SELECT `task_code`, cron  FROM apscheduler_jobs")  # 数据库中的所有任务
     await scheduler.init_scheduler(task_list)
-    logger.info(f'\n\n\n{"*" * 20} 服务【{job.title}】启动完成 {"*" * 20}\n\n\n'"")
+    logger.info(f'\n\n\n{"*" * 20} 服务【{job.title}】启动完成 {"*" * 20}\n\n\n')
 
 
 class GetJobForm(BaseModel):
@@ -53,7 +53,7 @@ async def add_job(request: Request, task: dict = Body(), task_type: str = Body()
 
 
 @job.delete("/api/job", summary="删除定时任务")
-async def add_job(request: Request, form: GetJobForm):
+async def remove_job(request: Request, form: GetJobForm):
     await scheduler.remove_exist_job(form.task_code)  # 移除任务
     logger.info(f"定时任务【{form.task_code}】禁用成功")
     return JSONResponse(status_code=200, content=jsonable_encoder({"status": 200, "message": "任务禁用成功"}))

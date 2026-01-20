@@ -6,7 +6,7 @@ from ..base_form import PaginationForm, BaseForm, ChangeSortForm
 
 class FindCallBackForm(PaginationForm):
     """ 查找回调记录列表form """
-    url: Optional[str] = Field(title='接口地址')
+    url: Optional[str] = Field(None, title='接口地址')
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -17,4 +17,4 @@ class FindCallBackForm(PaginationForm):
 
 class GetCallBackForm(BaseForm):
     """ 获取回调记录 """
-    id: int = Field(title='回调数据id')
+    id: int = Field(None, title='回调数据id')

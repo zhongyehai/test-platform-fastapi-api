@@ -2,7 +2,6 @@ import json
 import re
 
 import httpx
-import validators
 from typing import Optional, Union
 from pydantic import BaseModel as pydanticBaseModel, Field
 
@@ -94,7 +93,7 @@ class BaseForm(pydanticBaseModel, JsonUtil):
 
     def get_update_data(self, user_id=None):
         """ 获取更新的数据 """
-        data = self.dict()
+        data = self.model_dump()
         if "num" in data: data.pop("num")
         if user_id: data["update_user"] = user_id
         if "id" in data: data.pop("id")
@@ -123,17 +122,6 @@ class BaseForm(pydanticBaseModel, JsonUtil):
 
         if not email_to or not email_from:
             raise ValueError("选择了要邮件接收，则发件人、收件人必须有值")
-
-        # 改为选用户后，不校验邮箱格式
-        # # 校验发件邮箱
-        # if email_from and not validators.email(email_from.strip()):
-        #     raise ValueError(f"发件人邮箱【{email_from}】格式错误")
-        #
-        # # 校验收件邮箱
-        # for mail in email_to:
-        #     mail = mail.strip()
-        #     if mail and not validators.email(mail):
-        #         raise ValueError(f"收件人邮箱【{mail}】格式错误")
 
     def validate_func(self, func_container: dict, content: str, message=""):
 

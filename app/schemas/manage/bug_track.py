@@ -5,13 +5,13 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 
 class GetBugListForm(PaginationForm):
-    business_list: Optional[List[int]] = Field(title="业务线")
-    name: Optional[str] = Field(title="bug名字关键字")
-    detail: Optional[str] = Field(title="bug详情关键字")
-    status: Optional[str] = Field(title="bug状态")
-    replay: Optional[str] = Field(title="bug是否复盘")
-    conclusion: Optional[str] = Field(title="复盘结论")
-    iteration: Optional[str] = Field(title="迭代")
+    business_list: Optional[List[int]] = Field(None, title="业务线")
+    name: Optional[str] = Field(None, title="bug名字关键字")
+    detail: Optional[str] = Field(None, title="bug详情关键字")
+    status: Optional[str] = Field(None, title="bug状态")
+    replay: Optional[str] = Field(None, title="bug是否复盘")
+    conclusion: Optional[str] = Field(None, title="复盘结论")
+    iteration: Optional[str] = Field(None, title="迭代")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

@@ -66,7 +66,7 @@ class GetQueueTopicForm(BaseForm):
 class CreatQueueTopicForm(BaseForm):
     """ 创建消息队列 """
     instance_id: int = Field(..., title="所属消息队列实例数据id")
-    topic: Optional[str] = Field(title="rocket_mq对应topic，rabbit_mq对应queue_name")
+    topic: Optional[str] = Field(None, title="rocket_mq对应topic，rabbit_mq对应queue_name")
     desc: Optional[str] = Field(None, title="备注")
 
 

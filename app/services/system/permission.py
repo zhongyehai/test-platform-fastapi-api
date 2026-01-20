@@ -29,7 +29,7 @@ async def get_permission_detail(request: Request, form: schema.GetPermissionForm
 async def add_permission(request: Request, form: schema.CreatePermissionForm):
     data_list, max_num = [], await Permission.get_max_num()
     for index, data in enumerate(form.data_list):
-        add_data = data.dict()
+        add_data = data.model_dump()
         add_data["num"] = max_num + index + 1
         data_list.append(add_data)
     await Permission.batch_insert(data_list, request.state.user)

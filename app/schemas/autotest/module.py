@@ -10,7 +10,7 @@ class GetModuleTreeForm(BaseForm):
 
 class FindModuleForm(GetModuleTreeForm, PaginationForm):
     """ 查找模块 """
-    name: Optional[str] = Field(title="模块名")
+    name: Optional[str] = Field(None, title="模块名")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -23,7 +23,7 @@ class FindModuleForm(GetModuleTreeForm, PaginationForm):
 class AddModuleForm(GetModuleTreeForm):
     """ 添加模块的校验 """
     data_list: List[str] = Field(..., title="模块名list")
-    parent: Optional[int] = Field(title="父级id")
+    parent: Optional[int] = Field(None, title="父级id")
 
 
 class GetModuleForm(BaseForm):
@@ -34,4 +34,4 @@ class GetModuleForm(BaseForm):
 class EditModuleForm(GetModuleForm, GetModuleTreeForm):
     """ 修改模块的校验 """
     name: str = Field(..., title="模块名")
-    parent: Optional[int] = Field(title="父级id")
+    parent: Optional[int] = Field(None, title="父级id")

@@ -25,7 +25,7 @@ async def get_hit_detail(request: Request, form: schema.GetHitForm = Depends()):
 
 async def add_hit(request: Request, form: schema.CreatHitForm):
     await form.validate_request()
-    hit = await Hits.model_create(form.dict(), request.state.user)
+    hit = await Hits.model_create(form.model_dump(), request.state.user)
     return request.app.post_success(data=hit)
 
 

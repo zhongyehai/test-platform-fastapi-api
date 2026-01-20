@@ -7,7 +7,7 @@ from ..base_form import BaseForm, ChangeSortForm, PaginationForm, AddUiElementDa
 class ElementListForm(PaginationForm):
     """ 查询元素信息 """
     page_id: int = Field(..., title="页面id")
-    name: Optional[str] = Field(title="元素名")
+    name: Optional[str] = Field(None, title="元素名")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -40,9 +40,9 @@ class EditElementForm(BaseForm):
     name: str = Field(..., title="元素名")
     by: str = Field(..., title="定位方式")
     element: str = Field(..., title="定位元素表达式")
-    template_device: Optional[int] = Field(title="元素定位时参照的设备")
-    desc: Optional[str] = Field(title="备注")
-    wait_time_out: Optional[int] = Field(title="等待超时时间")
+    template_device: Optional[int] = Field(None, title="元素定位时参照的设备")
+    desc: Optional[str] = Field(None, title="备注")
+    wait_time_out: Optional[int] = Field(None, title="等待超时时间")
 
 
 class ChangeElementByIdForm(BaseForm):

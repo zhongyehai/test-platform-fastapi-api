@@ -7,10 +7,10 @@ from app.schemas.enums import ReceiveTypeEnum, BusinessLineBindEnvTypeEnum
 
 class FindBusinessLineForm(PaginationForm):
     """ 查找脚本form """
-    code: Optional[str] = Field(title="业务线code")
-    name: Optional[str] = Field(title="业务线名")
-    getAll: Optional[int] = Field(title="获取所有业务线，需管理员权限")
-    create_user: Optional[str] = Field(title="创建者")
+    code: Optional[str] = Field(None, title="业务线code")
+    name: Optional[str] = Field(None, title="业务线名")
+    getAll: Optional[int] = Field(None, title="获取所有业务线，需管理员权限")
+    create_user: Optional[str] = Field(None, title="创建者")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -41,7 +41,7 @@ class PostBusinessForm(BaseForm):
     bind_env: BusinessLineBindEnvTypeEnum = Field(
         ..., title="绑定环境机制", description="auto：新增环境时自动绑定，human：新增环境后手动绑定")
     env_list: list = Field(..., title="业务线要用的环境")
-    desc: Optional[str] = Field(title="备注")
+    desc: Optional[str] = Field(None, title="备注")
 
     async def validate_request(self, *args, **kwargs):
         if self.receive_type != "0":

@@ -5,8 +5,8 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 class FindRoleForm(PaginationForm):
     """ 查找角色参数校验 """
-    name: Optional[str] = Field(title="角色名")
-    role_id: Optional[int] = Field(title="权角色id")
+    name: Optional[str] = Field(None, title="角色名")
+    role_id: Optional[int] = Field(None, title="权角色id")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

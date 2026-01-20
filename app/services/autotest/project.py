@@ -36,8 +36,7 @@ async def get_project_detail(request: Request, form: schema.GetProjectForm = Dep
 async def add_project(request: Request, form: schema.AddProjectForm):
     await form.validate_request()
     models = ModelSelector(request.app.test_type)
-
-    project = await models.project.model_create(form.dict(), request.state.user)
+    project = await models.project.model_create(form.model_dump(), request.state.user)
     # 新增服务的时候，一并把运行环境、用例集设置齐全
     await models.env.create_env(RunEnv, models.project, project.id)
     await models.suite.create_suite_by_project(project.id)
@@ -56,8 +55,9 @@ async def change_project(request: Request, form: schema.EditProjectForm):
     if request.app.test_type != "api":
             data.pop("source_type")
             data.pop("source_addr")
-            data.pop("source_name")
             data.pop("source_id")
+    if request.app.test_type == "api" and form.source_type == "apifox":
+        data["source_id"] = form.parse_source_id()[-1]
 
     await models.project.filter(id=form.id).update(**data)
     return request.app.put_success()
@@ -103,7 +103,7 @@ async def change_project_env(request: Request, form: schema.EditEnvForm):
     all_func_name = await Script.get_func_by_script_id(project["script_list"])
     await form.validate_request(all_func_name=all_func_name)
 
-    update_data = form.dict()
+    update_data = form.model_dump()
     if request.app.test_type != "api":
         update_data.pop("headers")
     await project_env.model_update(update_data,  request.state.user)
@@ -112,7 +112,7 @@ async def change_project_env(request: Request, form: schema.EditEnvForm):
     project_env_list = await models.env.filter(
         project_id=project_env.project_id, id__not=project_env.env_id).values("env_id")
     await models.env.synchronization(
-        form.dict(),
+        form.model_dump(),
         [env["env_id"] for env in project_env_list],
         ["variables", "headers"] if request.app.test_type == "api" else ["variables"])
 

@@ -5,9 +5,9 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 
 class GetSystemErrorRecordList(PaginationForm):
-    url: Optional[str] = Field(title="请求地址")
-    method: Optional[str] = Field(title="请求方法")
-    request_user: Optional[str] = Field(title="发起请求用户")
+    url: Optional[str] = Field(None, title="请求地址")
+    method: Optional[str] = Field(None, title="请求方法")
+    request_user: Optional[str] = Field(None, title="发起请求用户")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

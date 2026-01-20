@@ -45,7 +45,7 @@ async def get_webhook(request: Request, form: schema.GetWebHookForm = Depends())
 async def add_webhook(request: Request, form: schema.PostWebHookForm):
     data_list, max_num = [], await WebHook.get_max_num()
     for index, data in enumerate(form.data_list):
-        insert_data = data.dict()
+        insert_data = data.model_dump()
         insert_data["num"] = max_num + index + 1
         data_list.append(insert_data)
     await WebHook.batch_insert(data_list, request.state.user)

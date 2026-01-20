@@ -121,7 +121,7 @@ async def add_api(request: Request, form: schema.AddApiForm):
         "project_id": form.project_id,
         "module_id": form.module_id,
         "num": max_num + index + 1,
-        **api.dict()
+        **api.model_dump()
     } for index, api in enumerate(form.api_list)]
     await Api.batch_insert(data_list, request.state.user)
     return request.app.post_success()

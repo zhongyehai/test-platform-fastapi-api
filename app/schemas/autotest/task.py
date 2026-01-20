@@ -24,8 +24,8 @@ class GetTaskForm(BaseForm):
 class AddTaskForm(BaseForm):
     """ 添加定时任务的校验 """
     project_id: int = Field(..., title="服务id")
-    suite_ids: Optional[list] = Field(title="用例集id")
-    case_ids: Optional[list] = Field(title="用例id")
+    suite_ids: Optional[list] = Field(None, title="用例集id")
+    case_ids: Optional[list] = Field(None, title="用例id")
     env_list: list = Field(..., title="运行环境")
     name: str = Field(..., title="任务名")
     is_send: SendReportTypeEnum = Field(
@@ -33,16 +33,16 @@ class AddTaskForm(BaseForm):
     receive_type: ReceiveTypeEnum = Field(
         ReceiveTypeEnum.DING_DING, title="接收测试报告类型", description="ding_ding、we_chat、email")
     webhook_list: list = Field(title="接收消息机器人地址")
-    email_server: Optional[str] = Field(title="发件邮箱服务器")
+    email_server: Optional[str] = Field(None, title="发件邮箱服务器")
     email_to: List[int] = Field(title="收件人邮箱")
-    email_from: Optional[int] = Field(title="发件人邮箱")
+    email_from: Optional[int] = Field(None, title="发件人邮箱")
     merge_notify: Optional[int] = Field(
         0, title="多个环境时，是否合并通知（只通知一次）", description="默认不合并，0不合并、1合并")
     cron: str = Field(..., title="cron表达式")
     skip_holiday: int = Field(1, title="是否跳过节假日、调休日")
     conf: Optional[dict] = Field({}, title="运行配置", description="ui存浏览器，app存运行服务器、手机、是否重置APP")
     is_async: int = Field(default=0, title="任务的运行机制", description="0：串行，1：并行，默认0")
-    call_back: Optional[Union[list, dict]] = Field(title="回调给流水线")
+    call_back: Optional[Union[list, dict]] = Field({}, title="回调给流水线")
     push_hit: int = Field(title="任务不通过时，是否自动记录问题", description="任务不通过时，是否自动记录，0：不记录，1：记录，默认1")
 
     def validate_is_send(self):
@@ -85,13 +85,13 @@ class EditTaskForm(AddTaskForm, GetTaskForm):
 class RunTaskForm(BaseForm):
     """ 运行任务 """
     id_list: list = Field(..., title="任务id list")
-    env_list: Optional[list] = Field(title="运行环境")
+    env_list: Optional[list] = Field(None, title="运行环境")
     is_async: int = Field(default=0, title="任务的运行机制", description="0：串行，1：并行，默认0")
     trigger_type: Optional[TriggerTypeEnum] = Field(
         TriggerTypeEnum.PAGE, title="触发类型", description="pipeline/page/cron")  # pipeline 跑完过后会发送测试报告
-    extend: Optional[Union[list, dict, str]] = Field(title="运维传过来的扩展字段，接收的什么就返回什么")
+    extend: Optional[Union[list, dict, str]] = Field(None, title="运维传过来的扩展字段，接收的什么就返回什么")
 
-    browser: Optional[str] = Field(default="chrome", title="运行浏览器（ui自动化必传）")
-    server_id: Optional[int] = Field(title="执行服务器（app自动化必传）")
-    phone_id: Optional[int] = Field(title="执行手机（app自动化必传）")
-    no_reset: Optional[bool] = Field(default=False, title="是否不重置手机（app自动化必传）")
+    browser: Optional[str] = Field("chrome", title="运行浏览器（ui自动化必传）")
+    server_id: Optional[int] = Field(None, title="执行服务器（app自动化必传）")
+    phone_id: Optional[int] = Field(None, title="执行手机（app自动化必传）")
+    no_reset: Optional[bool] = Field(False, title="是否不重置手机（app自动化必传）")

@@ -6,9 +6,9 @@ from ..base_form import BaseForm, PaginationForm, ChangeSortForm
 
 class GetPermissionListForm(PaginationForm):
     """ 查找权限参数校验 """
-    name: Optional[str] = Field(title="权限名")
-    source_addr: Optional[str] = Field(title="权限地址")
-    source_type: Optional[str] = Field(title="权限类型")
+    name: Optional[str] = Field(None, title="权限名")
+    source_addr: Optional[str] = Field(None, title="权限地址")
+    source_type: Optional[str] = Field(None, title="权限类型")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """

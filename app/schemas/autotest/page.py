@@ -7,7 +7,7 @@ from ..base_form import BaseForm, ChangeSortForm, PaginationForm, AddPageDataFor
 class PageListForm(PaginationForm):
     """ 查询页面信息 """
     module_id: int = Field(..., title="模块id")
-    name: Optional[str] = Field(title="模块名")
+    name: Optional[str] = Field(None, title="模块名")
 
     def get_query_filter(self, *args, **kwargs):
         """ 查询条件 """
@@ -34,4 +34,4 @@ class EditPageForm(GetPageForm):
     module_id: int = Field(..., title="模块id")
     id: int = Field(..., title="页面id")
     name: str = Field(..., title="页面名")
-    desc: Optional[str] = Field(title="描述")
+    desc: Optional[str] = Field(None, title="描述")
