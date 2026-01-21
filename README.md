@@ -1,16 +1,5 @@
 # 基于 fastapi生态 + tortoise-orm 开发的rest风格的测试平台后端
 
-    注：
-    锁定版本：
-        fastapi:0.115.12
-        pydantic:1.10.9
-        tortoise-ORM:0.19.3
-        starlette==0.46.0
-        typing-extensions==4.12.0
-    tortoise-ORM 与 pydantic2.x不适配，pydantic_model_creator方法会报错，使用pydantic1.10.9版本
-    详见 https://stackoverflow.com/questions/76648015/fastapi-tortoise-orm-got-keyerror-module-on-pydantic-model-creator
-    其他包酌情升级
-
 ## 线上预览：http://60.204.247.140/login  账号：admin、密码：123456，请不要修改密码
 
 ## 前端传送门：https://github.com/zhongyehai/test-platform-fastapi-front
