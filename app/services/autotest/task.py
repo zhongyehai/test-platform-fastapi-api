@@ -16,7 +16,7 @@ async def get_task_list(request: Request, form: schema.GetTaskListForm = Depends
     if form.detail:
         get_filed.extend([
             "cron", "skip_holiday", "status", "project_id", "merge_notify", "push_hit", "create_user", "receive_type",
-            "is_send", "env_list"
+            "is_send", "env_list", "skip_on_fail"
         ])
 
     query_data = await form.make_pagination(models.task, get_filed=get_filed)
@@ -25,7 +25,7 @@ async def get_task_list(request: Request, form: schema.GetTaskListForm = Depends
 
 async def change_task_sort(request: Request, form: schema.ChangeSortForm):
     models = ModelSelector(request.app.test_type)
-    await models.task.change_sort(**form.dict(exclude_unset=True))
+    await models.task.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 
@@ -122,7 +122,7 @@ async def run_task(request: Request, form: schema.RunTaskForm, background_tasks:
         background_tasks.add_task(case_runner(
             report_id=report.id, case_id_list=case_id_list, is_async=form.is_async, env_code=env_code, env_name=env["name"],
             browser=form.browser or task.conf["browser"], task_dict=dict(task), temp_variables=form.temp_variables, run_type=request.app.test_type,
-            extend={}, appium_config=appium_config
+            extend={}, appium_config=appium_config, skip_on_fail=form.skip_on_fail if form.skip_on_fail is not None else task.skip_on_fail
         ).parse_and_run)
 
     return request.app.trigger_success({

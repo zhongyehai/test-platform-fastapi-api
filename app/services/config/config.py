@@ -13,7 +13,7 @@ async def get_config_type_list(request: Request, form: schema.GetConfigTypeListF
 
 
 async def change_config_type_sort(request: Request, form: schema.ChangeSortForm):
-    await ConfigType.change_sort(**form.dict(exclude_unset=True))
+    await ConfigType.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 
@@ -52,7 +52,7 @@ async def get_config_list(request: Request, form: schema.FindConfigForm = Depend
 
 
 async def change_config_sort(request: Request, form: schema.ChangeSortForm):
-    await Config.change_sort(**form.dict(exclude_unset=True))
+    await Config.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

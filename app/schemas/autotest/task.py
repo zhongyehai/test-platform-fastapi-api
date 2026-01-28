@@ -42,6 +42,7 @@ class AddTaskForm(BaseForm):
     skip_holiday: int = Field(1, title="是否跳过节假日、调休日")
     conf: Optional[dict] = Field({}, title="运行配置", description="ui存浏览器，app存运行服务器、手机、是否重置APP")
     is_async: int = Field(default=0, title="任务的运行机制", description="0：串行，1：并行，默认0")
+    skip_on_fail: int = Field(default=0, title="用例不通过时，是否跳过后续用例的执行", description="0：不跳过，1：跳过，默认0")
     call_back: Optional[Union[list, dict]] = Field({}, title="回调给流水线")
     push_hit: int = Field(title="任务不通过时，是否自动记录问题", description="任务不通过时，是否自动记录，0：不记录，1：记录，默认1")
 
@@ -90,6 +91,7 @@ class RunTaskForm(BaseForm):
     trigger_type: Optional[TriggerTypeEnum] = Field(
         TriggerTypeEnum.PAGE, title="触发类型", description="pipeline/page/cron")  # pipeline 跑完过后会发送测试报告
     extend: Optional[Union[list, dict, str]] = Field(None, title="运维传过来的扩展字段，接收的什么就返回什么")
+    skip_on_fail: Optional[int] = Field(None, title="用例不通过时，是否跳过后续用例的执行", description="0：不跳过，1：跳过，默认0")
 
     browser: Optional[str] = Field("chrome", title="运行浏览器（ui自动化必传）")
     server_id: Optional[int] = Field(None, title="执行服务器（app自动化必传）")

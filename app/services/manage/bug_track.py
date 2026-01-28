@@ -25,7 +25,7 @@ async def change_bug_track_replay(request: Request, form: schema.ChangeBugReplay
 
 
 async def change_bug_track_sort(request: Request, form: schema.ChangeSortForm):
-    await BugTrack.change_sort(**form.dict(exclude_unset=True))
+    await BugTrack.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

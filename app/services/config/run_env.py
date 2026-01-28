@@ -30,7 +30,7 @@ async def get_run_env_group(request: Request):
 
 
 async def change_run_env_sort(request: Request, form: schema.ChangeSortForm):
-    await RunEnv.change_sort(**form.dict(exclude_unset=True))
+    await RunEnv.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

@@ -23,7 +23,7 @@ async def get_project_list(request: Request, form: schema.FindProjectListForm = 
 
 async def project_sort(request: Request, form: schema.ChangeSortForm):
     models = ModelSelector(request.app.test_type)
-    await models.project.change_sort(**form.dict(exclude_unset=True))
+    await models.project.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

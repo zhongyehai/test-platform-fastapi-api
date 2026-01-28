@@ -27,7 +27,7 @@ def get_step_key_board_code(request: Request):
 
 async def change_step_sort(request: Request, form: schema.ChangeSortForm):
     models = ModelSelector(request.app.test_type)
-    await models.step.change_sort(**form.dict(exclude_unset=True))
+    await models.step.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

@@ -14,7 +14,7 @@ async def get_todo_list(request: Request):
 
 
 async def change_todo_sort(request: Request, form: schema.ChangeSortForm):
-    await Todo.change_sort(**form.dict(exclude_unset=True))
+    await Todo.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

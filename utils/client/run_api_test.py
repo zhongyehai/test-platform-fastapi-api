@@ -75,10 +75,10 @@ class RunCase(RunTestRunner):
     """ 运行测试用例 """
 
     def __init__(self, report_id, case_id_list, env_code, env_name, temp_variables={}, task_dict={}, is_async=0,
-                 extend={}, insert_to=None, **kwargs):
+                 extend={}, insert_to=None, skip_on_fail=0, **kwargs):
 
         super().__init__(report_id=report_id, env_code=env_code, env_name=env_name, run_type="api", task_dict=task_dict,
-                         extend=extend, insert_to=insert_to)
+                         extend=extend, insert_to=insert_to, skip_on_fail=skip_on_fail)
         self.temp_variables = temp_variables
         self.test_plan["is_async"] = is_async
         self.case_id_list = case_id_list  # 要执行的用例id_list

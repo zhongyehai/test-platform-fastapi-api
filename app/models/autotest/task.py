@@ -30,6 +30,7 @@ class BaseTask(BaseModel):
     status = fields.CharEnumField(
         DataStatusEnum, default=DataStatusEnum.DISABLE, description="任务的启用状态, enable/disable，默认disable")
     is_async = fields.IntField(default=0, description="任务的运行机制，0：串行，1：并行，默认0")
+    skip_on_fail = fields.IntField(default=0, description="用例不通过时，是否跳过后续用例的执行，0：不跳过，1：跳过，默认0")
     suite_ids = fields.JSONField(default=[], description="用例集id")
     call_back = fields.JSONField(default=[], description="回调给流水线")
     project_id = fields.IntField(index=True, description="所属的服务id")

@@ -25,7 +25,8 @@ from utils.logs.log import logger
 class RunTestRunner:
 
     def __init__(
-            self, report_id=None, env_code=None, env_name=None, run_type="api", extend={}, task_dict={}, insert_to=None
+            self, report_id=None, env_code=None, env_name=None, run_type="api", extend={}, task_dict={}, insert_to=None,
+            skip_on_fail=0
     ):
         self.env_code = env_code  # 运行环境id
         self.env_name = env_name  # 运行环境名，用于发送即时通讯
@@ -35,6 +36,7 @@ class RunTestRunner:
         self.task_dict = task_dict
         self.insert_to = insert_to  # 把当前产生的报告的用例和步骤执行记录插入到指定的报告下（重跑并插入）
 
+        self.skip_on_fail=skip_on_fail
         self.time_out = 60
         self.wait_time_out = 5
         self.count_step = 0
@@ -83,6 +85,7 @@ class RunTestRunner:
         # testRunner需要的数据格式
         self.test_plan = {
             "is_async": 0,
+            "skip_on_fail": self.skip_on_fail,
             "run_type": self.run_type,
             "report_id": self.report_id,
             "report_model": self.report_model,
@@ -104,19 +107,6 @@ class RunTestRunner:
         self.parsed_api_dict = {}
         self.parsed_element_dict = {}
         self.run_env = None
-
-    # async def get_report_addr(self):
-    #     """ 获取报告前端地址 """
-    #     report_host = await Config.get_report_host()
-    #     if self.run_type == "api":  # 接口自动化
-    #         report_addr = await Config.get_api_report_addr()
-    #         return f'{report_host}{report_addr}'
-    #     elif self.run_type == "ui":  # web-ui自动化
-    #         report_addr = await Config.get_web_ui_report_addr()
-    #         return f'{report_host}{report_addr}'
-    #     else:  # app-ui自动化
-    #         report_addr = await Config.get_app_ui_report_addr()
-    #         return f'{report_host}{report_addr}'
 
     async def get_format_project(self, project_id):
         """ 从已解析的服务字典中取指定id的服务，如果没有，则取出来解析后放进去 """
@@ -293,10 +283,11 @@ class RunTestRunner:
             update_summary = await self.report_model.filter(id=self.insert_to).first().values("summary")
             update_summary["summary"]["stat"]["test_case"]["fail"] -= self.report.summary["stat"]["test_case"]["success"]
             update_summary["summary"]["stat"]["test_case"]["success"] += self.report.summary["stat"]["test_case"]["success"]
-            update_summary["summary"]["result"] = self.report.summary["result"]  # 更新测试结果
+            if update_summary["summary"]["stat"]["test_case"]["fail"] == 0:
+                update_summary["summary"]["result"] = self.report.summary["result"]  # 更新测试结果
             await self.report_model.filter(id=self.insert_to).update(
                 summary=update_summary["summary"],
-                is_passed=self.report.is_passed,
+                is_passed=1 if update_summary["summary"]["stat"]["test_case"]["fail"] == 0 else 0,
                 retry_count=F("retry_count") + 1,  # 重跑次数+1
                 notified=False,  # 状态更新后未通知
             )

@@ -23,7 +23,7 @@ async def get_user_list(request: Request, form: schema.FindUserForm = Depends())
 
 
 async def change_user_sort(request: Request, form: schema.ChangeSortForm):
-    await User.change_sort(**form.dict(exclude_unset=True))
+    await User.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

@@ -23,7 +23,7 @@ async def get_role_list(request: Request, form: schema.FindRoleForm = Depends())
 
 
 async def change_role_sort(request: Request, form: schema.ChangeSortForm):
-    await Role.change_sort(**form.dict(exclude_unset=True))
+    await Role.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

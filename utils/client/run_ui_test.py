@@ -15,10 +15,10 @@ from config import ui_action_mapping_reverse
 class RunCase(RunTestRunner):
     """ 运行测试用例 """
     def __init__(self, report_id, case_id_list, env_code, env_name, temp_variables={}, task_dict={}, is_async=0,
-                 extend={}, browser=True, appium_config={}, run_type="ui", **kwargs):
+                 extend={}, browser=True, appium_config={}, run_type="ui", skip_on_fail=0, **kwargs):
 
         super().__init__(report_id=report_id, env_code=env_code, env_name=env_name, run_type=run_type, extend=extend,
-                         task_dict=task_dict)
+                         task_dict=task_dict, skip_on_fail=skip_on_fail)
         self.temp_variables = temp_variables
         self.run_type = run_type
         if run_type == "ui":

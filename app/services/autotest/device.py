@@ -17,7 +17,7 @@ async def get_server_list(request: Request, form: schema.GetServerListForm = Dep
 
 
 async def change_server_sort(request: Request, form: schema.ChangeSortForm):
-    await Server.change_sort(**form.dict(exclude_unset=True))
+    await Server.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 
@@ -73,7 +73,7 @@ async def get_phone_list(request: Request, form: schema.GetPhoneListForm = Depen
 
 
 async def change_phone_sort(request: Request, form: schema.ChangeSortForm):
-    await Phone.change_sort(**form.dict(exclude_unset=True))
+    await Phone.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

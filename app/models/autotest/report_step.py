@@ -23,9 +23,7 @@ class BaseReportStep(BaseModel):
         16, default='waite',
         description="步骤测试结果，waite：等待执行、running：执行中、fail：执行不通过、success：执行通过、skip：跳过、error：报错")
     step_data = fields.JSONField(default={}, description="步骤的数据")
-    summary = fields.JSONField(
-        default={},
-        description="步骤的统计")
+    summary = fields.JSONField(default={}, description="步骤的统计")
 
     class Meta:
         abstract = True  # 不生成表

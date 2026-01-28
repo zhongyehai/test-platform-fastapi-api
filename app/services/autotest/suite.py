@@ -42,7 +42,7 @@ async def upload_suite(request: Request, file: UploadFile = File(), project_id: 
 
 async def change_suite_sort(request: Request, form: schema.ChangeSortForm):
     models = ModelSelector(request.app.test_type)
-    await models.suite.change_sort(**form.dict(exclude_unset=True))
+    await models.suite.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

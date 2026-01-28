@@ -18,7 +18,7 @@ async def get_module_tree(request: Request, form: schema.GetModuleTreeForm = Dep
 
 async def change_module_sort(request: Request, form: schema.ChangeSortForm):
     models = ModelSelector(request.app.test_type)
-    await models.module.change_sort(**form.dict(exclude_unset=True))
+    await models.module.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 async def get_module_detail(request: Request, form: schema.GetModuleForm = Depends()):

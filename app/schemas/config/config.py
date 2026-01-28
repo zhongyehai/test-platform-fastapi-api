@@ -86,7 +86,7 @@ class PostConfigForm(BaseForm):
     """ 新增配置表单校验 """
     name: str = Field(..., title="配置名")
     value: str = Field(..., title="配置值")
-    type: str = Field(..., title="配置类型")
+    type: int = Field(..., title="配置类型")
     desc: Optional[str] = Field(None, title="备注")
 
 

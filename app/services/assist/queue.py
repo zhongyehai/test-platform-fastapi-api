@@ -13,7 +13,7 @@ async def get_queue_instance_list(request: Request, form: schema.GetQueueInstanc
 
 
 async def change_queue_instance_sort(request: Request, form: schema.ChangeSortForm):
-    await QueueInstance.change_sort(**form.dict(exclude_unset=True))
+    await QueueInstance.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 
@@ -44,7 +44,7 @@ async def get_queue_topic_list(request: Request, form: schema.GetQueueTopicListF
 
 
 async def change_queue_topic_sort(request: Request, form: schema.ChangeSortForm):
-    await QueueTopic.change_sort(**form.dict(exclude_unset=True))
+    await QueueTopic.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 

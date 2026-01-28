@@ -19,7 +19,7 @@ async def batch_to_user(request: Request, form: schema.BusinessToUserForm):
 
 
 async def change_business_sort(request: Request, form: schema.ChangeSortForm):
-    await BusinessLine.change_sort(**form.dict(exclude_unset=True))
+    await BusinessLine.change_sort(**form.model_dump(exclude_unset=True))
     return request.app.put_success()
 
 
