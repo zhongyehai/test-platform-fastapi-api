@@ -2,27 +2,28 @@
 import json
 import os
 import io
-import platform
 import shutil
 
-from config import basedir
 from utils.variables.content_type import CONTENT_TYPE
 
+BASEDIR = os.path.abspath(".")  # 项目根路径
+
 # 各模块的路径
-LOG_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/logs/"))  # 日志路径
-STATIC_ADDRESS = os.path.abspath(os.path.join(basedir, r"static"))  # 导入模板存放路径
-SCRIPT_ADDRESS = os.path.abspath(os.path.join(basedir, "." + r"/script_list"))  # 自定义函数文件存放地址
-DIFF_RESULT = os.path.abspath(os.path.join(basedir, ".." + r"/diff_result/"))  # yapi接口监控结果存放地址
-CASE_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/case_files/"))  # 用例数据文件存放地址
-UI_CASE_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/ui_case_files/"))  # ui用例数据文件存放地址
-MOCK_DATA_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/mock_data/"))  # mock数据文件存放地址
-CALL_BACK_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/call_back/"))  # 回调数据文件存放地址
-TEMP_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/temp_files/"))  # 临时文件存放地址
-GIT_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/git_files/"))  # git文件存放地址
-SWAGGER_FILE_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/swagger_files/"))  # swagger文件存放地址
-DB_BACK_UP_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/db_back_up_files/"))  # 数据库备份地址
-REPORT_IMG_UI_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/report_img_ui/"))  # 截图存放路径
-REPORT_IMG_APP_ADDRESS = os.path.abspath(os.path.join(basedir, ".." + r"/report_img_app/"))  # 截图存放路径
+LOG_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/logs/"))  # 日志路径
+STATIC_ADDRESS = os.path.abspath(os.path.join(BASEDIR, r"static"))  # 导入模板存放路径
+SCRIPT_ADDRESS = os.path.abspath(os.path.join(BASEDIR, "." + r"/script_list"))  # 自定义函数文件存放地址
+# DIFF_RESULT = os.path.abspath(os.path.join(BASEDIR, ".." + r"/diff_result/"))  # yapi接口监控结果存放地址
+CASE_FILE_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/case_files/"))  # 用例数据文件存放地址
+UI_CASE_FILE_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/ui_case_files/"))  # ui用例数据文件存放地址
+APP_CASE_FILE_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/app_case_files/"))  # app用例数据文件存放地址
+MOCK_DATA_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/mock_data/"))  # mock数据文件存放地址
+CALL_BACK_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/call_back/"))  # 回调数据文件存放地址
+TEMP_FILE_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/temp_files/"))  # 临时文件存放地址
+# GIT_FILE_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/git_files/"))  # git文件存放地址
+SWAGGER_FILE_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/swagger_files/"))  # swagger文件存放地址
+DB_BACK_UP_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/db_back_up_files/"))  # 数据库备份地址
+REPORT_IMG_UI_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/report_img_ui/"))  # 截图存放路径
+REPORT_IMG_APP_ADDRESS = os.path.abspath(os.path.join(BASEDIR, ".." + r"/report_img_app/"))  # 截图存放路径
 
 
 def _check_file_path(paths):
@@ -37,9 +38,9 @@ def _check_file_path(paths):
 
 
 _check_file_path([
-    LOG_ADDRESS, SCRIPT_ADDRESS, DIFF_RESULT, CASE_FILE_ADDRESS, UI_CASE_FILE_ADDRESS,
-    MOCK_DATA_ADDRESS, CALL_BACK_ADDRESS, TEMP_FILE_ADDRESS, GIT_FILE_ADDRESS, DB_BACK_UP_ADDRESS, SWAGGER_FILE_ADDRESS,
-    REPORT_IMG_UI_ADDRESS, REPORT_IMG_APP_ADDRESS
+    LOG_ADDRESS, SCRIPT_ADDRESS, CASE_FILE_ADDRESS, UI_CASE_FILE_ADDRESS, APP_CASE_FILE_ADDRESS,
+    MOCK_DATA_ADDRESS, CALL_BACK_ADDRESS, TEMP_FILE_ADDRESS, DB_BACK_UP_ADDRESS, SWAGGER_FILE_ADDRESS,
+    REPORT_IMG_UI_ADDRESS, REPORT_IMG_APP_ADDRESS  # , DIFF_RESULT, GIT_FILE_ADDRESS
 ])
 
 

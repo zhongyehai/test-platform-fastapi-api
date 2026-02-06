@@ -9,7 +9,7 @@ from utils.client.run_test_runner import RunTestRunner
 from utils.client.parse_model import StepModel, FormatModel
 from utils.client.test_runner.utils import build_url
 from utils.util.file_util import FileUtil
-from config import ui_action_mapping_reverse
+from config import ui_action_mapping_reverse, app_action_mapping_reverse
 
 
 class RunCase(RunTestRunner):
@@ -274,7 +274,10 @@ class RunCase(RunTestRunner):
                     step_element = await self.get_format_element(step.element_id)
                     step = StepModel(**dict(step))
                     step.report_case_id = report_case.id
-                    step.execute_name = ui_action_mapping_reverse[step.execute_type]  # 执行方式的别名，用于展示测试报告
+                    if self.run_type == 'ui':   # 执行方式的别名，用于展示测试报告
+                        step.execute_name = ui_action_mapping_reverse[step.execute_type]
+                    else:
+                        step.execute_name = app_action_mapping_reverse[step.execute_type]
                     step.extracts = await self.parse_extracts(step.extracts)  # 解析数据提取
                     step.validates = await self.parse_validates(step.validates)  # 解析断言
                     element_project = await self.get_format_project(step_element.project_id)  # 元素所在的项目

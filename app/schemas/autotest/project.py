@@ -55,7 +55,7 @@ class AddProjectForm(BaseForm):
     # app自动化测试
     app_package: Optional[str] = Field(None, title="app包名")
     app_activity: Optional[str] = Field(None, title="appActivity")
-    template_device: Optional[str] = Field(None, title="元素定位时参照的设备id")
+    template_device: Optional[int] = Field(None, title="元素定位时参照的设备id")
 
 
     def validate_source_addr(self):

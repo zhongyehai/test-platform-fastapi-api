@@ -8,9 +8,13 @@
 
 ## Python版本：python => 3.11+
 
-### 1.安装依赖包，推荐清华源：
-    pip install uv;uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
-    pip install uv && uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+### 执行器
+    api自动化测试：httpx
+    ui自动化测试：playwright
+    app自动化测试：appium
+
+### 1.安装依赖包，推荐清华源
+    sudo pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 ### 2.创建MySQL数据库
 
@@ -36,19 +40,22 @@
     执行 sudo python init_data.py run_init
 
 ### 6、若要进行UI自动化：
+    在安装完依赖后执行：
+        win：playwright install chromium
+        linux：python -m playwright install chromium
 
-    需安装对应的浏览器，建议装chrome浏览器
+### 7、若要进行app自动化测试：
+    安装 appium： npm install -g appium@1.22
+    启动 appium： appium --allow-cors
 
-### 7.生产环境下的一些配置:
-
+### 8.生产环境下的一些配置:
     1.把main端口改为8024启动
     2.把job端口改为8025启动
     3.准备好前端包，并在nginx.location / 下指定前端包的路径
     4.直接把项目下的nginx.conf文件替换nginx下的nginx.conf文件
     5.nginx -s reload 重启nginx
 
-### 8.启动测试平台
-
+### 9.启动测试平台
     本地开发: 
         运行测试平台主服务              main.py
         运行定时任务/运行任务调度服务     job.py

@@ -3,6 +3,7 @@ from selenium.webdriver.common.keys import Keys
 from ..base_model import fields, pydantic_model_creator, NumFiled
 import config
 
+
 class ConfigType(NumFiled):
     """ 配置类型表 """
 
@@ -109,26 +110,33 @@ class Config(NumFiled):
 
     @classmethod
     async def get_find_element_by_ui(cls):
+        """ 详见 https://playwright.dev/python/docs/locators#locating-elements """
         return [
-        {"label": "根据id属性定位", "value": "id"},
-        {"label": "根据xpath表达式定位", "value": "xpath"},
-        {"label": "根据class选择器定位", "value": "class name"},
-        {"label": "根据css选择器定位", "value": "css selector"},
-        {"label": "根据name属性定位", "value": "name"},
-        {"label": "根据tag名字定位 ", "value": "tag name"},
-        {"label": "根据超链接文本定位", "value": "link text"},
-        {"label": "页面地址", "value": "url"},
-        {"label": "根据具体坐标定位", "value": "coordinate"}
-    ]
+            {"label": "get_by_role", "value": "role"},
+            {"label": "get_by_placeholder", "value": "placeholder"},
+            {"label": "get_by_text", "value": "text"},
+            {"label": "get_by_label", "value": "label"},
+            {"label": "get_by_alt_text", "value": "alt_text"},
+            {"label": "get_by_title ", "value": "title"},
+            {"label": "CSS / XPATH", "value": "locator"},
+            {"label": "get_by_test_id", "value": "test_id"},
+            {"label": "url", "value": "url"}
+        ]
 
     @classmethod
     async def get_find_element_by_app(cls):
-        data = await cls.get_find_element_by_ui()
-        data.extend([
+        return [
+            {"label": "根据id属性定位", "value": "id"},
+            {"label": "根据xpath表达式定位", "value": "xpath"},
+            {"label": "根据class选择器定位", "value": "class name"},
+            {"label": "根据css选择器定位", "value": "css selector"},
+            {"label": "根据name属性定位", "value": "name"},
+            {"label": "根据tag名字定位 ", "value": "tag name"},
+            {"label": "根据超链接文本定位", "value": "link text"},
+            {"label": "根据具体坐标定位", "value": "coordinate"},
             {"label": "根据元素范围坐标定位", "value": "bounds"},
             {"label": "accessibility_id", "value": "accessibility id"}
-        ])
-        return data
+        ]
 
     @classmethod
     async def get_config_detail(cls, conf_id=None, conf_code=None):

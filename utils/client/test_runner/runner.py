@@ -2,14 +2,14 @@ import copy
 import traceback
 from unittest.case import SkipTest
 
-from . import exceptions, response, extract # , logger
-from .client.http import HttpSession
-from .client.webdriver import WebDriverSession
-from .exceptions import StopTest
+from . import exceptions, response, extract  # , logger
+from .client.http_client import HttpSession
+from .client.ui_client import UIClientSession, get_ui_client
+from .client.app_client import APPClientSession, get_app_client
 from .runner_context import SessionContext
-from .webdriver_action import GetUiDriver, GetAppDriver, get_web_driver
 from utils.logs.redirect_print_log import RedirectPrintLogToMemory
 from utils.logs.log import logger
+
 
 class Runner:
     """ Running testcases.
@@ -55,7 +55,7 @@ class Runner:
         self.validation_results = []
         self.run_type = config.get("run_type") or "api"
         self.resp_obj = None
-        self.driver = None
+        self.client = None
         self.client_session = None
         self.redirect_print = None
         self.client_init_error = None
@@ -65,8 +65,8 @@ class Runner:
 
         # 记录当前步骤的执行进度
         self.report_step = None
-        self.pause_step_time_out = config.get("pause_step_time_out", 10 * 60) # 暂停测试步骤状态变更的超时时间（暂停 => 放行），默认10分钟
-        self.testcase_teardown_hooks = config.get("teardown_hooks", [])  # 用例级别的后置条件
+        self.pause_step_time_out = config.get("pause_step_time_out", 10 * 60)  # 暂停测试步骤状态变更的超时时间（暂停 => 放行），默认10分钟
+        # self.testcase_teardown_hooks = config.get("teardown_hooks", [])  # 用例级别的后置条件
         self.session_context = SessionContext(self.functions)
 
         # await self.do_hook_actions(config.get("setup_hooks", []))  # 用例级别的前置条件
@@ -80,19 +80,11 @@ class Runner:
             if self.run_type == "api":
                 self.client_session = HttpSession(self.base_url)
             elif self.run_type == "ui":
-                self.client_session = WebDriverSession()
-                self.driver = await get_web_driver(driver_type="ui", browser_name=self.browser_name)
+                self.client_session = UIClientSession()
+                self.client = await get_ui_client(browser_name=self.browser_name)
             else:
-                self.client_session = WebDriverSession()
-                self.driver = await get_web_driver(driver_type="app", **self.appium_config)
-
-    def try_close_browser(self):
-        """ 强制关闭浏览器、app """
-        # 可能出现没有获取到driver的情况
-        try:
-            self.driver.close_all()
-        except Exception as e:
-            print(f"try_close_browser 错误：{e}")
+                self.client_session = APPClientSession()
+                self.client = await get_app_client(**self.appium_config)
 
     # def __del__(self):
     #     if self.testcase_teardown_hooks:
@@ -268,7 +260,7 @@ class Runner:
         else:
             # 执行测试步骤浏览器操作, 操作比较耗时，异步执行
             await self.client_session.async_do_action(
-                self.driver,
+                self.client,
                 name=step_name,
                 case_id=case_id,
                 variables_mapping=copy.deepcopy(variables_mapping),
@@ -277,7 +269,8 @@ class Runner:
 
             # 数据提取
             await self.report_step.test_is_start_extract()
-            extracted_variables_mapping = await extract.extract_data(self.session_context, self.driver, extractors)
+            extracted_variables_mapping = await extract.extract_data(self.session_context, self.client, extractors,
+                                                                     self.run_type)
 
         self.client_session.meta_data["data"][0]["extract_msgs"] = extracted_variables_mapping
         self.session_context.update_session_variables(extracted_variables_mapping)  # 把提取到的数据更新到变量中
@@ -301,7 +294,7 @@ class Runner:
                 validators,
                 self.run_type,
                 resp_obj=self.resp_obj,
-                driver=self.driver
+                client=self.client
             )
         except (exceptions.ParamsError, exceptions.ValidationFailure, exceptions.ExtractFailure) as error:
             logger.warning(f"""步骤: {step_name}, 执行报错：{error}\n""")
@@ -351,19 +344,12 @@ class Runner:
                     }
                 }
         """
-        self.meta_datas = None
         self.redirect_print = RedirectPrintLogToMemory()  # 重定向自定义函数的打印到内存中
         try:
             await self.init_client_session()  # 执行步骤前判断有没有初始化client_session
         except Exception as error:
-            # ui
-            if "PATH" in str(error):
-                # ("'chromedriver.exe' executable needs to be in PATH. Please see https://chromedriver.chromium.org/home",)
-                self.client_init_error = "浏览器驱动找不到"
-            elif "version" in str(error):
-                # Message: session not created: This version of ChromeDriver only supports Chrome version
-                self.client_init_error = "驱动版本与浏览器不匹配"
-            elif "Could not find a connected" in str(error):  # app
+            # app
+            if "Could not find a connected" in str(error):
                 # Message: An unknown server-side error occurred while processing the command. Original error: Could not find a connected Android device in 23322ms.
                 self.client_init_error = "服务器未识别到测试设备"
             elif "'app' option is required for reinstall" in str(error):
@@ -374,10 +360,11 @@ class Runner:
                 self.client_init_error = str(error)
                 logger.error(traceback.format_exc())
 
-        self.report_step = await report_step_model.get_resport_step_with_status(step_dict.get("report_step_id"), self.pause_step_time_out)
-        if self.report_step.status == "stop": # 停止测试
+        self.report_step = await report_step_model.get_resport_step_with_status(step_dict.get("report_step_id"),
+                                                                                self.pause_step_time_out)
+        if self.report_step.status == "stop":  # 停止测试
             self.__clear_step_test_data()
-            raise StopTest("中断测试执行")
+            raise exceptions.StopTest("中断测试执行")
         await self.report_step.test_is_running()
         await self.report_step.test_is_start_parse(step_dict)
 
@@ -385,7 +372,8 @@ class Runner:
             raise RuntimeError(self.client_init_error)
 
         try:
-            logger.info(f"""开始执行步骤: {self.report_step.report_id}.{self.report_step.report_case_id}.{self.report_step.id}.{step_dict.get("name")}""")
+            logger.info(
+                f"""开始执行步骤: {self.report_step.report_id}.{self.report_step.report_case_id}.{self.report_step.id}.{step_dict.get("name")}""")
             await self._run_test(step_dict)
             self.client_session.meta_data["result"] = "success"
         except Exception as error:  # 捕获步骤运行中报错(报错、断言不通过、跳过测试)
@@ -395,13 +383,9 @@ class Runner:
                 await self.report_step.test_is_skip()
             else:
                 self.session_context.update_session_variables({"case_run_result": "fail"})
-
-                if isinstance(error, (
-                        exceptions.ParamsError,
-                        exceptions.ValidationFailure,
-                        exceptions.ExtractFailure,
-                        exceptions.ReadTimeout
-                )) is False:
+                if not isinstance(error,
+                                  (exceptions.ParamsError, exceptions.ValidationFailure, exceptions.ExtractFailure,
+                                   exceptions.ReadTimeout)):
                     self.client_session.meta_data["result"] = "error"
                 else:
                     self.client_session.meta_data["result"] = "fail"

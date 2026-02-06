@@ -3,7 +3,9 @@ from selenium.webdriver.common.keys import Keys
 
 from ...models.autotest.model_factory import ModelSelector
 from ...schemas.autotest import step as schema
-from config import ui_action_mapping_list, ui_assert_mapping_list, ui_extract_mapping_list
+from config import ui_action_mapping_list, ui_assert_mapping_list, ui_extract_mapping_list, app_action_mapping_list, \
+    app_extract_mapping_list, app_assert_mapping_list
+
 
 async def get_step_list(request: Request, form: schema.GetStepListForm = Depends()):
     models = ModelSelector(request.app.test_type)
@@ -13,13 +15,22 @@ async def get_step_list(request: Request, form: schema.GetStepListForm = Depends
 
 
 def get_step_execute_mapping(request: Request):
-    return request.app.get_success(ui_action_mapping_list)
+    if request.app.test_type == "ui":
+        return request.app.get_success(ui_action_mapping_list)
+    return request.app.get_success(app_action_mapping_list)
+
 
 def get_step_extract_mapping(request: Request):
-    return request.app.get_success(ui_extract_mapping_list)
+    if request.app.test_type == "ui":
+        return request.app.get_success(ui_extract_mapping_list)
+    return request.app.get_success(app_extract_mapping_list)
+
 
 def get_step_assert_mapping(request: Request):
-    return request.app.get_success(ui_assert_mapping_list)
+    if request.app.test_type == "ui":
+        return request.app.get_success(ui_assert_mapping_list)
+    return request.app.get_success(app_assert_mapping_list)
+
 
 def get_step_key_board_code(request: Request):
     return request.app.get_success({key: f'按键【{key}】' for key in dir(Keys) if key.startswith('_') is False})

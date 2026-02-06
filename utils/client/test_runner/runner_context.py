@@ -2,7 +2,7 @@
 import json
 import re
 
-from . import exceptions, parser, utils, validate_func
+from . import exceptions, parser, utils
 
 
 class SessionContext(object):
@@ -142,7 +142,6 @@ class SessionContext(object):
         """
         comparator = validator_dict["comparator"]
         validate_func = parser.get_mapping_function(comparator, self.FUNCTIONS_MAPPING)
-        check_item = validator_dict.get("check")
         check_value = validator_dict["check_value"]
         expect_value = validator_dict["expect"]
         check_value_type, expect_value_type = type(check_value).__name__, type(expect_value).__name__
@@ -150,11 +149,6 @@ class SessionContext(object):
         try:
             validator_dict["check_result"] = "pass"
             validate_func(check_value, expect_value)
-            # logger.log_debug(f"断言: "
-            #                  f"{check_item} "
-            #                  f"{getattr(validate_func, comparator).__doc__} "
-            #                  f"{expect_value}({type(expect_value).__name__}) "
-            #                  f"==> pass")
         except (AssertionError, TypeError) as error:
             # 方便在页面上对比，转为dict
             try:
@@ -162,7 +156,6 @@ class SessionContext(object):
                     expect_value = json.loads(expect_value)
             except Exception as json_loads_error:
                 pass
-            # 断言方式: {getattr(validate_func, comparator).__doc__}\n
             error_msg = f"""
             断言不通过\n
             断言方式: {validate_func.__doc__}\n
@@ -174,9 +167,11 @@ class SessionContext(object):
             validator_dict["check_result"] = "fail"
             raise exceptions.ValidationFailure(error_msg)
 
-    def do_ui_validation(self, driver, validator_dict):
+    async def do_page_validation(self, client, validator_dict, test_type):
         """ 根据断言数据执行断言方法
         Args:
+            client: 执行器
+            test_type: 测试类型，api、ui、app
             validator_dict (dict): validator dict
             {
                 'comparator': 'assert_50is_exists',
@@ -185,15 +180,13 @@ class SessionContext(object):
             }
         """
         check, expect, comparator = validator_dict["check"], validator_dict["expect"], validator_dict["comparator"]
-        validate_func = getattr(driver, comparator)
+        validate_func = getattr(client, comparator)
         try:
             validator_dict["check_result"] = "pass"
-            validate_func(check, expect)
-            # logger.log_debug(f"断言: "
-            #                  f"预期结果：{expect} "
-            #                  f"断言方式：{validate_func.__doc__} "
-            #                  f"断言元素：{check}"
-            #                  f"==> 通过")
+            if test_type == "ui":
+                await validate_func(check, expect)
+            else:
+                validate_func(check, expect)
         except (AssertionError, TypeError) as error:
             error_msg = f"""
             断言不通过\n
@@ -206,9 +199,12 @@ class SessionContext(object):
             validator_dict["check_result"] = "fail"
             raise exceptions.ValidationFailure(error_msg)
 
-    async def validate(self, validators, test_type, resp_obj=None, driver=None):
+    async def validate(self, validators, test_type, resp_obj=None, client=None):
         """ 执行断言
-        [{'_01equals': ['content', 'True']}]
+        [
+            {'_01equals': ['content', 'True']},
+            {'check': ['placeholder', '账号'], 'comparator': 'assert_51_element_value_equal_to', 'expect': 'admin'}
+        ]
         """
         self.validation_results = []
         if not validators:
@@ -218,16 +214,16 @@ class SessionContext(object):
         failures = []
 
         for validator in validators:
-            # evaluate validators with context variable mapping.
             if validator.get("check") is None:  # 数据校验，已经解析过了
                 evaluated_validator = await self.__eval_check_item(parser.parse_validator(validator), resp_obj)
             else:
+                validator["expect"] = await self.eval_content(validator["expect"])
                 evaluated_validator = validator
             try:
-                if validator.get("check") is None:  # 数据校验，已经解析过了
+                if validator.get("check") is None:  # 已经解析过了，有可能是接口自动化，也有可能是ui自动化的数据校验
                     self.do_api_validation(evaluated_validator)
                 else:
-                    self.do_ui_validation(driver, evaluated_validator)
+                    await self.do_page_validation(client, evaluated_validator, test_type)
             except exceptions.ValidationFailure as ex:
                 validate_pass = False
                 failures.append(str(ex))

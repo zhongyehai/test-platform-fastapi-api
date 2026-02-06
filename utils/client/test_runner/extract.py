@@ -62,16 +62,19 @@ async def extract_by_data(
                 return get_mapping_variable(variable_data, session_context_variables_mapping)
 
 
-def extract_by_element(driver, value: dict):
+async def extract_by_element(client, value: dict, test_type):
     """ 从响应数据中提取数据 """
     action_name = value.get('action')
-    action_func = getattr(driver, action_name)
+    action_func = getattr(client, action_name)
+    if test_type == "ui":
+        return await action_func((value.get('by_type'), value.get('element')))
     return action_func((value.get('by_type'), value.get('element')))
 
 
-async def extract_data(session_context, driver, extractors):
+async def extract_data(session_context, client, extractors, test_type):
     """ 执行数据提取，并储存到 OrderedDict对象
     Args:
+        test_type: api/app/ui
         extractors (list):
             [
                 {"resp_status_code": "status_code"},
@@ -98,7 +101,7 @@ async def extract_data(session_context, driver, extractors):
             )
 
         elif extractor['type'] == 'element':  # 执行页面获取
-            result = extract_by_element(driver, extractor['value'])
+            result = await extract_by_element(client, extractor['value'], test_type)
 
         extracted_variables_mapping[extractor['key']] = result
         session_context_variables_mapping[extractor['key']] = result

@@ -48,9 +48,13 @@ class TestRunner:
                 case_runner.report_step.add_run_step_result_count(report_case.summary,
                                                                   case_runner.client_session.meta_data)
         report_case.summary["time"]["end_at"] = datetime.datetime.now()  # 用例执行结束时间
-        case_runner.try_close_browser()  # 执行完一条用例，不管是不是ui自动化，都强制执行关闭浏览器，防止执行时报错，导致没有关闭到浏览器造成driver进程一直存在
-        await report_case.save_case_result_and_summary()
 
+        if case_runner.run_type != "api":
+            try:
+                await case_runner.client.close_all() # 每执行完一条用例都强制执行关闭浏览器/APP
+            except Exception as error:
+                logger.warning(f'关闭浏览器/APP时出错：{error}')
+        await report_case.save_case_result_and_summary()
         return report_case.summary
 
     async def run(self, test_plan):

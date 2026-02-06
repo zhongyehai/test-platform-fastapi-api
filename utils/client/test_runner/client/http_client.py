@@ -8,7 +8,7 @@ import httpx
 from httpx import Response, HTTPStatusError
 
 from utils.util.file_util import FileUtil
-from utils.client.test_runner.client import BaseSession
+from utils.client.test_runner.client.base_client import BaseSession
 from utils.client.test_runner.utils import build_url, lower_dict_keys, omit_long_data
 from utils.logs.log import logger
 

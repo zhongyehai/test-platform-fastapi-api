@@ -4,10 +4,10 @@ import platform
 from dotenv import load_dotenv
 
 from utils.client.test_runner import validate_func as assert_func_file
-from utils.client.test_runner.webdriver_action import Actions
+from utils.client.test_runner.client.app_client import AppClient
+from utils.client.test_runner.client.ui_client import UIClient
 
 load_dotenv()  # 加载 .env 文件
-basedir = os.path.abspath(".")
 is_linux = platform.platform().startswith("Linux")
 
 
@@ -97,19 +97,38 @@ for func in dir(assert_func_file):
         assert_mapping_list.append({"value": doc})
 
 # UI自动化的行为事件
-action_mapping = Actions.get_action_mapping()
+action_mapping = UIClient.get_action_mapping()
 ui_action_mapping_dict, ui_action_mapping_list = action_mapping["mapping_dict"], action_mapping["mapping_list"]
 ui_action_mapping_reverse = dict(zip(ui_action_mapping_dict.values(), ui_action_mapping_dict.keys()))
 
 # UI自动化的断言事件
-ui_assert_mapping = Actions.get_assert_mapping()
+ui_assert_mapping = UIClient.get_assert_mapping()
 ui_assert_mapping_dict, ui_assert_mapping_list = ui_assert_mapping["mapping_dict"], ui_assert_mapping["mapping_list"]
 
 # UI自动化的数据提取事件
-extract_mapping = Actions.get_extract_mapping()
-ui_extract_mapping, ui_extract_mapping_list = extract_mapping["mapping_dict"], extract_mapping["mapping_list"]
+ui_extract_mapping = UIClient.get_extract_mapping()
+ui_extract_mapping, ui_extract_mapping_list = ui_extract_mapping["mapping_dict"], ui_extract_mapping["mapping_list"]
 ui_extract_mapping.setdefault("自定义函数", "func")
 ui_extract_mapping_list.extend([
+    {"label": "常量", "value": "const"},
+    {"label": "自定义变量", "value": "variable"},
+    {"label": "自定义函数", "value": "func"}
+])
+
+# APP自动化的行为事件
+action_mapping = AppClient.get_action_mapping()
+app_action_mapping_dict, app_action_mapping_list = action_mapping["mapping_dict"], action_mapping["mapping_list"]
+app_action_mapping_reverse = dict(zip(app_action_mapping_dict.values(), app_action_mapping_dict.keys()))
+
+# UI自动化的断言事件
+app_assert_mapping = AppClient.get_assert_mapping()
+app_assert_mapping_dict, app_assert_mapping_list = app_assert_mapping["mapping_dict"], app_assert_mapping["mapping_list"]
+
+# UI自动化的数据提取事件
+app_extract_mapping = AppClient.get_extract_mapping()
+app_extract_mapping, app_extract_mapping_list = app_extract_mapping["mapping_dict"], app_extract_mapping["mapping_list"]
+app_extract_mapping.setdefault("自定义函数", "func")
+app_extract_mapping_list.extend([
     {"label": "常量", "value": "const"},
     {"label": "自定义变量", "value": "variable"},
     {"label": "自定义函数", "value": "func"}
@@ -173,7 +192,7 @@ data_type_mapping = [
 ]
 
 # ui自动化支持的浏览器
-browser_name = {"chrome": "chrome", "gecko": "火狐"}
+browser_name = {"chrome": "chrome", "firefox": "火狐", "webkit": "Safari"}
 
 # 运行app自动化的服务器设备系统映射
 server_os_mapping = ["Windows", "Mac", "Linux"]
