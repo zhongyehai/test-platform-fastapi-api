@@ -66,13 +66,14 @@ async def notify_report(request: Request, form: schema.NotifyReportForm):
             email_to = await User.filter(id__in=task_dict["email_to"]).all().values("email")
             task_dict["email_to"] = [email["email"] for email in email_to]
         else:  # 解析并组装webhook地址并加签
+            task_dict["receive_type"] = form.notify_to
             task_dict["webhook_list"] = await WebHook.get_webhook_list(task_dict["receive_type"], task_dict["webhook_list"])
 
         if form.notify_to != 'default':
             task_dict["is_send"] = SendReportTypeEnum.ALWAYS.value  # 手动触发发送通知的，且选择的通知渠道不是任务设置的，不管结果如何都通知
 
         res = await send_report(
-            content_list=[{"report_id": report.id, "report_summary": report.summary}],
+            content_list=[{"report_id": report.id, "retry_count": report.retry_count, "report_summary": report.summary}],
             **task_dict,
             report_addr=report_addr
         )

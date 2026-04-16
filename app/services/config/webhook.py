@@ -31,7 +31,8 @@ async def debug_webhook(request: Request, form: schema.GetWebHookForm):
         case _:
             return request.app.fail("webhook类型暂不支持")
     try:
-        return request.app.success(f"测试通过：{await webhook.debug(msg)}")
+        res = await webhook.debug(msg)
+        return request.app.success(f"消息发送成功：{res}")
     except Exception as e:
         logger.error(traceback.format_exc())
         return request.app.fail("调试触发失败，请检查地址是否正确，网络是否通畅")

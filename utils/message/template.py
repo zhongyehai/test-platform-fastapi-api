@@ -13,30 +13,32 @@ def inspection_ding_ding(content_list, task_kwargs):
                     f'### 任务名: {task_kwargs["name"]} \n\n\n'
         }
     }
-    for content_data in content_list:
-        report_id, content = content_data["report_id"], content_data["report_summary"]
-        case_stat, step_stat = content["stat"]["test_case"], content["stat"]["test_step"]
+    for content in content_list:
+        report_id, retry_count, summary = content["report_id"], content.get("retry_count"), content["report_summary"]
+        case_stat, step_stat = summary["stat"]["test_case"], summary["stat"]["test_step"]
         pass_rate = round(case_stat["success"] / case_stat["total"] * 100, 3) if case_stat["total"] else 100
         notify_template["markdown"]["text"] += (
-            f'#### 运行环境:<font color=#409EFF> {content["env"]["name"]} </font>\n> '
-            f'#### 开始时间:<font color=#409EFF> {content["time"]["start_at"]} </font>\n> '
-            f'#### 结束时间:<font color=#409EFF> {content["time"]["end_at"]} </font>\n> '
+            f'#### 运行环境:<font color=#409EFF> {summary["env"]["name"]} </font>\n> '
+            f'#### 开始时间:<font color=#409EFF> {summary["time"]["start_at"]} </font>\n> '
+            f'#### 结束时间:<font color=#409EFF> {summary["time"]["end_at"]} </font>\n> '
             f'#### 执行:<font color=#409EFF> {case_stat["total"]} </font>条用例 \n> '
             f'#### 通过:<font color=#00FF00> {case_stat["success"]} </font>条用例 \n> '
             f'#### 失败:<font color=#FF0000> {case_stat["fail"] + case_stat["error"]} </font>条用例 \n> '
             f'#### 通过率:<font color=#409EFF> {pass_rate}% </font> \n> '
             f'#### 此次共运行<font color=#19D4AE> {step_stat["total"]} </font>个步骤，'
-            f'涉及<font color=#19D4AE> {content["stat"]["count"]["api"]} </font>个接口 \n> '
+            f'涉及<font color=#19D4AE> {summary["stat"]["count"]["api"]} </font>个接口 \n> '
             )
-        if content_data["report_summary"]["stat"]["response_time"]["slow"] or content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
+        if retry_count:
+            notify_template["markdown"]["content"] += f'>#### 共重跑:<font color="FF0000"> {retry_count} </font>次\n'
+        if content["report_summary"]["stat"]["response_time"]["slow"] or content["report_summary"]["stat"]["response_time"]["very_slow"]:
             notify_template["markdown"]["text"] += "#### 其中: "
-            if content_data["report_summary"]["stat"]["response_time"]["slow"]:
+            if content["report_summary"]["stat"]["response_time"]["slow"]:
                 notify_template["markdown"]["text"] += (
-                    f'<font color="#FF0000"> 有{len(content_data["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒 </font>, '
+                    f'<font color="#FF0000"> 有{len(content["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒 </font>, '
                 )
-            if content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
+            if content["report_summary"]["stat"]["response_time"]["very_slow"]:
                 notify_template["markdown"]["text"] += (
-                    f'<font color="#FF0000"> 有{len(content_data["report_summary"]["stat"]["response_time"]["very_slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["very_slow"]}毫秒 </font>, '
+                    f'<font color="#FF0000"> 有{len(content["report_summary"]["stat"]["response_time"]["very_slow"])}个接口响应时间超过{content["report_summary"]["stat"]["response_time"]["response_time_level"]["very_slow"]}毫秒 </font>, '
                 )
             notify_template["markdown"]["text"] += """<font color="#FF0000">请确认是否需要优化</font>\n"""
         notify_template["markdown"]["text"] += f'#### 详情请【[点击此处]({task_kwargs["report_addr"] + str(report_id)})】查看\n\n\n'
@@ -52,30 +54,32 @@ def inspection_we_chat(content_list, task_kwargs):
                        f'>**任务名**: {task_kwargs["name"]} \n\n'
         }
     }
-    for content_data in content_list:
-        report_id, content = content_data["report_id"], content_data["report_summary"]
-        case_stat, step_stat = content["stat"]["test_case"], content["stat"]["test_step"]
+    for content in content_list:
+        report_id, retry_count, summary = content["report_id"], content.get("retry_count"), content["report_summary"]
+        case_stat, step_stat = summary["stat"]["test_case"], summary["stat"]["test_step"]
         pass_rate = round(case_stat["success"] / case_stat["total"] * 100, 3) if case_stat["total"] else 100
         notify_template["markdown"]["content"] += (
-            f'>**运行环境**: {content["env"]["name"]} \n'
-            f'>**开始时间**: {content["time"]["start_at"]} \n'
-            f'>**结束时间**: {content["time"]["end_at"]} \n'
+            f'>**运行环境**: {summary["env"]["name"]} \n'
+            f'>**开始时间**: {summary["time"]["start_at"]} \n'
+            f'>**结束时间**: {summary["time"]["end_at"]} \n'
             f'>**执行**:<font color="comment"> {case_stat["total"]} </font>条用例\n'
             f'>**通过**:<font color="info"> {case_stat["success"]} </font>条用例\n'
             f'>**失败**:<font color="warning"> {case_stat["fail"] + case_stat["error"]} </font>条用例\n'
             f'>**通过率**:<font color="info"> {pass_rate}% </font>\n'
             f'>此次共运行<font color="info"> {step_stat["total"]} </font>个步骤，'
-            f'涉及<font color="info"> {content["stat"]["count"]["api"]} </font>个接口 \n> '
+            f'涉及<font color="info"> {summary["stat"]["count"]["api"]} </font>个接口 \n> '
         )
-        if content_data["report_summary"]["stat"]["response_time"]["slow"] or content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
+        if retry_count:
+            notify_template["markdown"]["content"] += f'>**共重跑**:<font color="warning"> {retry_count} </font>次\n'
+        if content["report_summary"]["stat"]["response_time"]["slow"] or content["report_summary"]["stat"]["response_time"]["very_slow"]:
             notify_template["markdown"]["content"] += "其中: "
-            if content_data["report_summary"]["stat"]["response_time"]["slow"]:
+            if content["report_summary"]["stat"]["response_time"]["slow"]:
                 notify_template["markdown"]["content"] += (
-                    f'<font color="warning"> 有{len(content_data["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒 </font>, '
+                    f'<font color="warning"> 有{len(content["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒 </font>, '
                 )
-            if content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
+            if content["report_summary"]["stat"]["response_time"]["very_slow"]:
                 notify_template["markdown"]["content"] += (
-                    f'<font color="warning"> 有{len(content_data["report_summary"]["stat"]["response_time"]["very_slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["very_slow"]}毫秒 </font>, '
+                    f'<font color="warning"> 有{len(content["report_summary"]["stat"]["response_time"]["very_slow"])}个接口响应时间超过{content["report_summary"]["stat"]["response_time"]["response_time_level"]["very_slow"]}毫秒 </font>, '
                 )
             notify_template["markdown"]["content"] += """<font color="warning">请确认是否需要优化</font>\n"""
         notify_template["markdown"]["content"] += f'**详情请【[点击此处]({task_kwargs["report_addr"] + str(report_id)})】查看** \n\n\n'
@@ -98,16 +102,16 @@ def render_html_report(content_list, task_kwargs):
         <br/>
     """
     all_res = []
-    for content_data in content_list:
-        report_id, content = content_data["report_id"], content_data["report_summary"]
-        all_res.append(content["result"])
-        case_stat, step_stat = content["stat"]["test_case"], content["stat"]["test_step"]
+    for content in content_list:
+        report_id, retry_count, summary = content["report_id"], content.get("retry_count"), content["report_summary"]
+        all_res.append(summary["result"])
+        case_stat, step_stat = summary["stat"]["test_case"], summary["stat"]["test_step"]
         pass_rate = round(case_stat["success"] / case_stat["total"] * 100, 3) if case_stat["total"] else 100
         notify_template += (
             f"""
-            <div><span>运行环境: <span style="color: #60C0DDFF">{content["env"]["name"]}</span></span></div>
-            <div><span>开始时间: <span style="color: #60C0DDFF">{content["time"]["start_at"]}</span></span></div>
-            <div><span>结束时间: <span style="color: #60C0DDFF">{content["time"]["end_at"]}</span></span></div>
+            <div><span>运行环境: <span style="color: #60C0DDFF">{summary["env"]["name"]}</span></span></div>
+            <div><span>开始时间: <span style="color: #60C0DDFF">{summary["time"]["start_at"]}</span></span></div>
+            <div><span>结束时间: <span style="color: #60C0DDFF">{summary["time"]["end_at"]}</span></span></div>
             <div><span>执行: <span style="color: #60C0DDFF">{case_stat["total"]}</span> 条用例</span></div>
             <div><span>通过: <span style="color: #9BCA63FF">{case_stat["success"]}</span> 条用例</span></div>
             <div><span>失败: <span style="color: #FA6E86FF">{case_stat["fail"] + case_stat["error"]}</span> 条用例</span></div>
@@ -120,28 +124,32 @@ def render_html_report(content_list, task_kwargs):
                     </span>
                     个步骤, 涉及 
                     <span style="color: #60C0DDFF"> 
-                        {content["stat"]["count"]["api"]} 
+                        {summary["stat"]["count"]["api"]} 
                     </span> 
                     个接口 
                 </span>
             </div>
             """
         )
-        if content_data["report_summary"]["stat"]["response_time"]["slow"] or content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
+        if retry_count:
+            notify_template += f"""
+            <div><span>共重跑: <span style="color: #FA6E86FF"> {retry_count} </span>次</span></div>
+            """
+        if content["report_summary"]["stat"]["response_time"]["slow"] or content["report_summary"]["stat"]["response_time"]["very_slow"]:
             notify_template += "其中: "
-            if content_data["report_summary"]["stat"]["response_time"]["slow"]:
+            if content["report_summary"]["stat"]["response_time"]["slow"]:
                 notify_template += (
                     f"""
                     <span style="color: #E4080A">
-                        有{len(content_data["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒
+                        有{len(content["report_summary"]["stat"]["response_time"]["slow"])}个接口响应时间超过{content["report_summary"]["stat"]["response_time"]["response_time_level"]["slow"]}毫秒
                     </span>, 
                     """
                 )
-            if content_data["report_summary"]["stat"]["response_time"]["very_slow"]:
+            if content["report_summary"]["stat"]["response_time"]["very_slow"]:
                 notify_template += (
                     f"""
                     <span style="color: #E4080A">
-                        有{len(content_data["report_summary"]["stat"]["response_time"]["very_slow"])}个接口响应时间超过{content_data["report_summary"]["stat"]["response_time"]["response_time_level"]["very_slow"]}毫秒
+                        有{len(content["report_summary"]["stat"]["response_time"]["very_slow"])}个接口响应时间超过{content["report_summary"]["stat"]["response_time"]["response_time_level"]["very_slow"]}毫秒
                     </span>, 
                     """
                 )

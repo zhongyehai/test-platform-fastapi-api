@@ -38,6 +38,8 @@ class WebHook(BaseModel):
         if secret:
             if webhook_type == WebHookTypeEnum.DING_DING.value:
                 return cls.build_ding_ding_addr(addr, secret)
+            elif webhook_type == WebHookTypeEnum.WE_CHAT.value:
+                return cls.build_we_chat_addr(addr, secret)
         return addr
 
     @classmethod
@@ -49,7 +51,18 @@ class WebHook(BaseModel):
         string_to_sign_enc = string_to_sign.encode('utf-8')
         hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
         sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
-        return f'{addr}&timestamp={timestamp}&sign={sign}'
+        addr = addr + "?" if addr.endswith("?") is False else addr
+        return f'{addr}timestamp={timestamp}&sign={sign}'
+
+    @classmethod
+    def build_we_chat_addr(cls, addr: str, secret: str):
+        """ 企业微信加签 """
+        timestamp = str(round(time.time() * 1000))
+        string_to_sign = f"{timestamp}\n{secret}"
+        hmac_code = hmac.new(secret.encode('utf-8'), string_to_sign.encode('utf-8'), digestmod=hashlib.sha256).digest()
+        signature = urllib.parse.quote_plus(base64.b64encode(hmac_code).decode('utf-8'))
+        addr = addr + "?" if addr.endswith("?") is False else addr
+        return f'{addr}key={secret}&timestamp={timestamp}&signature={signature}'
 
     async def debug(self, msg):
         """ 调试 """
@@ -57,6 +70,6 @@ class WebHook(BaseModel):
         try:
             async with httpx.AsyncClient(verify=False) as client:
                 res = await client.post(addr, json=msg, timeout=30)
-            return res.json()
+            return res.text
         except Exception as e:
             raise

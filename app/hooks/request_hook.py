@@ -1,8 +1,9 @@
 import json
 import uuid
+import time
 
 from fastapi import Request, Response
-
+from prometheus_client import Counter, Histogram
 
 async def set_body(request: Request, body: bytes):
     async def receive():
@@ -21,8 +22,13 @@ async def get_body(request: Request) -> str:
 def check_is_log_response(path):
     """ 不打日志的接口 """
     return all(sub not in path for sub in [
-        'download', '/report/step-img', '/report/suite-list', '/docs', '/redoc', '/api/openapi'
+        'download', '/report/step-img', '/report/suite-list', 'metrics', '/docs', '/redoc', '/api/openapi'
     ])
+
+
+# 定义监控指标
+REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])
+REQUEST_DURATION = Histogram('http_request_duration_seconds', 'HTTP request duration', ['method', 'endpoint'])
 
 
 def register_request_hook(app):
@@ -56,7 +62,13 @@ def register_request_hook(app):
             request.app.logger.info(
                 f'【{request.method}】【{request_id}】【{request.url.path}】: {request.query_params or request.state.set_body}')
 
+        start_time = time.time()
         response: Response = await call_next(request)
+        duration = time.time() - start_time
+
+        # 记录监控指标
+        REQUEST_COUNT.labels(method=request.method, endpoint=request.url.path, status=response.status_code).inc()
+        REQUEST_DURATION.labels(method=request.method, endpoint=request.url.path).observe(duration)
 
         # 打印响应
         if check_is_log_response(request.url.path):

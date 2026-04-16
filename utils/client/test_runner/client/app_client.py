@@ -188,7 +188,8 @@ class AppClient(BaseClient):
 
     def web_driver_wait_until(self, *args, **kwargs):
         """ 基于 WebDriverWait().until()封装base方法 """
-        return WebDriverWait(self.driver, kwargs.get('wait_time_out', self.wait_time_out), 1).until(*args)
+        # 等待Appium客户端查找元素的超时时间
+        return WebDriverWait(self.driver, kwargs.get('wait_time_out', self.wait_time_out),0.2).until(*args)
 
     def find_element(self, locator: Tuple[str, str], wait_time_out: Optional[int] = None, **kwargs) -> Any:
         """

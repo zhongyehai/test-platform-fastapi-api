@@ -45,7 +45,7 @@ async def send_system_error(title, content):
             "content": f"{title}:\n\n{content}"
         }
     }
-    await send_msg(WebHook.build_webhook_addr(_default_web_hook_type, _default_web_hook, _web_hook_secret), msg)
+    await send_msg(WebHook.build_webhook_addr(DefaultWebhook.DEFAULT_WEBHOOK_TYPE, DefaultWebhook.DEFAULT_WEBHOOK_ADDR, DefaultWebhook.WEBHOOK_SECRET), msg)
 
 
 async def send_inspection_by_msg(receive_type, content_list, kwargs):

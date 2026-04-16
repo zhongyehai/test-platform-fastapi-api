@@ -24,7 +24,7 @@ class AppRunServer(BaseModel):
     async def request_success(self):
         await self.model_update({"status": 2})
 
-    async def get_appium_config(self, app_package, app_activity, phone, no_reset=False, command_timeout=120):
+    async def get_appium_config(self, app_package, app_activity, phone, no_reset=False, command_timeout=20):
         """ 获取appium配置 """
         appium_config = {
             "host": self.ip,
@@ -34,6 +34,10 @@ class AppRunServer(BaseModel):
             "noReset": no_reset,  # 控制APP记录的信息是否不重置
             # "unicodeKeyboard": True,  # 使用 appium-ime 输入法
             # "resetKeyboard": True,  # 表示在测试结束后切回系统输入法
+            "appium:settings[waitForIdleTimeout]": 0,  # 不等待界面完全静止，极大提升速度并减少卡死
+            # Appium客户端查找元素的超时时间
+            # "appium:settings[waitForSelectorTimeout]": 5000,  # 查找元素超时设为 5 秒
+            "appium:settings[waitForSelectorTimeout]": 0,  # 关闭Appium底层查找超时，否则会覆盖代码里的 WebDriverWait
 
             # 设备参数
             "platformName": phone.os,
