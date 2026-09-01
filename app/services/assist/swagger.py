@@ -1,7 +1,7 @@
 import json
 import os.path
+import traceback
 
-import requests
 import httpx
 from fastapi import Request, Depends
 
@@ -348,8 +348,9 @@ async def get_pull_swagger_log(request: Request, form: schema.GetPullLogForm = D
 
 class PullApiFox:
 
-    def __init__(self, project_id: int, cookies: str):
+    def __init__(self, source_addr: str, project_id: int, cookies: str):
         self.project_id = project_id
+        self.source_project_id = source_addr.split('/')[-2]
         self.cookies = cookies
         self.json_schema = {}
         self.parsed_json_schema = {}
@@ -360,7 +361,7 @@ class PullApiFox:
             response = await client.get(
                 url,
                 headers={
-                    "x-project-id": f"{self.project_id}",
+                    "x-project-id": f"{self.source_project_id}",
                     "cookie": self.cookies,
                     "x-client-version": "2.8.2-alpha.2"
                 },
@@ -369,14 +370,16 @@ class PullApiFox:
         return response.json()["data"]
 
     async def pull_api_tree(self):
+        """ 获取接口树 """
         response_data = await self.pull_data(
-            f"https://api.apifox.com/api/v1/projects/{self.project_id}/api-tree-list?locale=zh-CN"
+            f"https://api.apifox.com/api/v1/projects/{self.source_project_id}/api-tree-list?locale=zh-CN"
         )
         return response_data
 
     async def pull_json_schema(self):
+        """ 获取所有的 schema """
         response_data = await self.pull_data(
-            f'https://api.apifox.com/api/v1/projects/{self.project_id}/data-schemas?locale=zh-CN'
+            f'https://api.apifox.com/api/v1/projects/{self.source_project_id}/data-schemas?locale=zh-CN'
         )
         json_schema = {}
         for item in response_data:
@@ -487,15 +490,16 @@ class PullApiFox:
         return self
 
     async def pull_api_from_apifox(self):
-        project_count, module_count, api_count, new_api = 0, 0, 0, []
+        project_count, module_count, new_module_name, api_count, new_api_name = 0, 0, [], 0, []
         project_response = await self.pull_api_tree()
         common_user_id = await User.filter(account="common").first().values("id")
         common_business_id = await BusinessLine.filter(code="common").first().values("id")
 
         for project_data in project_response:
-            if project_data.get("folder") is None:  # 直接放在最外层的接口
+            if project_data.get("folder") is None or project_data["folder"]["id"] != self.project_id:  # 直接放在最外层的接口
                 continue
             project_name = project_data["name"]
+            logger.info(f"开始更新服务：{project_name}")
             db_project = await ApiProject.filter(name=project_name).first()
             if db_project is None:
                 db_project = await ApiProject.create(**{
@@ -520,6 +524,7 @@ class PullApiFox:
                 project_count += 1
 
             for module_index, module_data in enumerate(project_data["children"]):
+                logger.info(f'开始更新模块：{project_name} =》 {module_data["name"]}')
                 db_module = await ApiModule.filter(name=module_data["name"], project_id=db_project.id).first()
                 if db_module is None:
                     db_module = await ApiModule.create(
@@ -533,10 +538,12 @@ class PullApiFox:
                         }
                     )
                     module_count += 1
+                    new_module_name.append(module_data["name"])
                 else:
                     await db_module.filter(id=db_module.id).update(**{"source_id": module_data["folder"]["id"]})
 
                 for api_index, api_data in enumerate(module_data["children"]):
+                    logger.info(f'开始更新接口：{project_name} =》 {module_data["name"]} =》 {api_data["api"]["name"]}')
                     json_api_id = api_data["api"]["id"]
                     api = await ApiMsg.filter(
                         module_id=db_module.id,
@@ -559,10 +566,11 @@ class PullApiFox:
                             "mock_response": self.api_args_dict[json_api_id]["response"],
                             **self.api_args_dict[json_api_id]
                         })
-                        new_api.append({
+                        new_api_name.append({
                             "project_id": db_project.id,
                             "module_id": db_module.id,
                             "api_id": new_db_api.id,
+                            "api_name": new_db_api.name,
                             "api_addr": api_data["api"]["path"],
                         })
                         api_count += 1
@@ -572,6 +580,8 @@ class PullApiFox:
                             "mock_response": self.api_args_dict[json_api_id]["response"],
                             **self.api_args_dict[json_api_id]
                         })
+
+            logger.info(f'服务：{project_name} \n共新增模块【{module_count}】个，分别是【{new_module_name}】\n共新增接口【{api_count}】个，分别是【{new_api_name}】')
 
 
 async def pull_swagger(request: Request, form: schema.SwaggerPullForm):
@@ -587,15 +597,16 @@ async def pull_swagger(request: Request, form: schema.SwaggerPullForm):
 
     if form.cookies:  # apifox
         try:
-            pull_api_fox = PullApiFox(project.source_id, form.cookies)
+            pull_api_fox = PullApiFox(project.source_addr, project.source_id, form.cookies)
             await pull_api_fox.pull_json_schema()
             pull_api_fox.parse_json_schema()
             await pull_api_fox.pull_api_detail()
             await pull_api_fox.pull_api_from_apifox()
-            await pull_log.pull_success(project)
         except Exception as error:
+            logger.error(traceback.format_exc())
             await pull_log.pull_fail(project, error.args)
             return request.app.fail(f"apifox数据拉取报错，结果为: \n{error.args}")
+        await pull_log.pull_success(project)
     else:  # swagger
         swagger_data = {}
         try:

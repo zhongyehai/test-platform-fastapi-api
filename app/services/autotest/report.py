@@ -66,7 +66,8 @@ async def notify_report(request: Request, form: schema.NotifyReportForm):
             email_to = await User.filter(id__in=task_dict["email_to"]).all().values("email")
             task_dict["email_to"] = [email["email"] for email in email_to]
         else:  # 解析并组装webhook地址并加签
-            task_dict["receive_type"] = form.notify_to
+            # 如果是Default，需要转为具体对应的方式
+            task_dict["receive_type"] = task_dict["receive_type"] if form.notify_to == "default" else form.notify_to
             task_dict["webhook_list"] = await WebHook.get_webhook_list(task_dict["receive_type"], task_dict["webhook_list"])
 
         if form.notify_to != 'default':
@@ -82,7 +83,7 @@ async def notify_report(request: Request, form: schema.NotifyReportForm):
             return request.app.success("触发通知成功")
         elif res is False:
             return request.app.fail("通知失败，请检查通知渠道设置")
-    return request.app.fail("当前报告不符合任务设置的触发通知条件")
+    return request.app.fail("当前报告不符合任务设置的触发通知条件，请自行确认")
 
 
 async def get_report_suite_list(request: Request, form: schema.GetReportCaseSuiteListForm = Depends()):
